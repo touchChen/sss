@@ -175,6 +175,7 @@ class http_simple(plain.plain):
 
     def server_decode(self, buf):
         if self.has_recv_header:
+            logging.debug("obfs has_recv_header")
             return (buf, True, False)
 
         self.recv_buffer += buf

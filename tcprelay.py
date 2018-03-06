@@ -860,14 +860,14 @@ class TCPRelayHandler(object):
                         obfs_decode = self._obfs.server_decode(data)
                         if self._stage == STAGE_INIT:
                             self._overhead = self._obfs.get_overhead(self._is_local) + self._protocol.get_overhead(self._is_local)
-                            server_info = self._protocol.get_server_info()
+                            server_info = self._protocol.get_server_info() #what is server_info
                             server_info.overhead = self._overhead
                     except Exception as e:
                         shell.print_exception(e)
                         logging.error("exception from %s:%d" % (self._client_address[0], self._client_address[1]))
                         self.destroy()
                         return
-                    if obfs_decode[2]:
+                    if obfs_decode[2]: #empty
                         data = self._obfs.server_encode(b'')
                         try:
                             self._write_to_sock(data, self._local_sock)
@@ -879,7 +879,7 @@ class TCPRelayHandler(object):
                             self.destroy()
                             return
                     if obfs_decode[1]:
-                        if not self._protocol.obfs.server_info.recv_iv:
+                        if not self._protocol.obfs.server_info.recv_iv: #what is revce_iv?
                             iv_len = len(self._protocol.obfs.server_info.iv)
                             self._protocol.obfs.server_info.recv_iv = obfs_decode[0][:iv_len]
                         data = self._encryptor.decrypt(obfs_decode[0])
@@ -887,7 +887,7 @@ class TCPRelayHandler(object):
                         data = obfs_decode[0]
                     try:
                         data, sendback = self._protocol.server_post_decrypt(data)
-                        if sendback:
+                        if sendback: #return null to client
                             backdata = self._protocol.server_pre_encrypt(b'')
                             backdata = self._encryptor.encrypt(backdata)
                             backdata = self._obfs.server_encode(backdata)
@@ -911,6 +911,7 @@ class TCPRelayHandler(object):
                 return
         if self._stage == STAGE_STREAM:
             if self._is_local:
+                logging.info("STREAM...")
                 if self._encryptor is not None:
                     data = self._protocol.client_pre_encrypt(data)
                     data = self._encryptor.encrypt(data)
@@ -1431,7 +1432,7 @@ class TCPRelay(object):
                     if handler:
                         handler.destroy()
         else:
-            if sock:
+            if sock: #is not socket
                 handler = self._fd_to_handlers.get(fd, None)
                 if handler:
                     handle = handler.handle_event(sock, fd, event)
