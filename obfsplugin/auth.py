@@ -485,6 +485,7 @@ class auth_aes128_sha1(auth_base):
             max_client = int(server_info.protocol_param.split('#')[0])
         except:
             max_client = 64
+        logging.info("max_client=%d"%max_client)
         self.server_info.data.set_max_client(max_client)
 
     def trapezoid_random_float(self, d):
@@ -577,6 +578,7 @@ class auth_aes128_sha1(auth_base):
     def client_pre_encrypt(self, buf):
         ret = b''
         ogn_data_len = len(buf)
+        logging.debug("buf:%s"%buf)
         if not self.has_sent_header:
             head_size = self.get_head_size(buf, 30)
             datalen = min(len(buf), random.randint(0, 31) + head_size)
