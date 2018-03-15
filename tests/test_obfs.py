@@ -53,11 +53,9 @@ _obfs.set_server_info(server_info)
 
 
 
-_en = _obfs.client_pre_encrypt("012345678")
+_en = _obfs.client_pre_encrypt("5454451111")
 _de = _obfs.server_post_decrypt(_en)
 
-
-print(_en)
 print(_de)
 
 sys.exit()
