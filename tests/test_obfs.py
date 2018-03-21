@@ -7,7 +7,6 @@ import logging
 import signal
 
 import inspect
-from sympy.logic.algorithms.dpll2 import Level
 
     
 file_path = os.path.dirname(os.path.realpath(inspect.getfile(inspect.currentframe())))
@@ -19,7 +18,6 @@ from shadowsocks.common import pre_parse_header, parse_header
 logging.basicConfig(level=logging.DEBUG)
 
 _obfs = obfs.obfs("auth_aes128_md5")
-#print(_obfs.obfs.max_time_dif)
 
 
 _data = _obfs.init_data()
