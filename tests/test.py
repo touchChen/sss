@@ -25,10 +25,11 @@ import select
 import time
 import argparse
 from subprocess import Popen, PIPE
+from mpmath import loggamma
 
 python = ['python']
 
-default_url = 'http://www.jxqx.net/weather/index.php'
+default_url = 'http://www.baidu.com'
 
 parser = argparse.ArgumentParser(description='test Shadowsocks')
 parser.add_argument('-c', '--client-conf', type=str, default=None)
@@ -55,16 +56,16 @@ if config.client_conf:
         server_args.extend(['-c', config.server_conf])
     else:
         server_args.extend(['-c', config.client_conf])
+        
 if config.client_args:
     client_args.extend(config.client_args.split())
     if config.server_args:
         server_args.extend(config.server_args.split())
     else:
         server_args.extend(config.client_args.split())
+        
 if config.url == default_url:
     server_args.extend(['--forbidden-ip', ''])
-
-
 
 
 p1 = Popen(server_args, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
@@ -93,7 +94,7 @@ try:
         for fd in r:
             line = fd.readline()
             if not line:
-                if stage == 2 and fd == p3.stdout:
+                if stage == 2 and fd == p3.stdout:  # curl started...
                     stage = 3
             if bytes != str:
                 line = str(line, 'utf8')

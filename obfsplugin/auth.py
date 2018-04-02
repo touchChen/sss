@@ -582,7 +582,6 @@ class auth_aes128_sha1(auth_base):
     def client_pre_encrypt(self, buf):
         ret = b''
         ogn_data_len = len(buf)
-        logging.debug("buf:%s"%buf)
         if not self.has_sent_header:
             head_size = self.get_head_size(buf, 30)
             # len is between 0 and 31
