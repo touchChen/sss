@@ -7,7 +7,6 @@ import logging
 import signal
 
 import inspect
-from sympy.logic.algorithms.dpll2 import Level
 
     
 file_path = os.path.dirname(os.path.realpath(inspect.getfile(inspect.currentframe())))
@@ -17,10 +16,7 @@ from shadowsocks import encrypt, obfs, eventloop, shell, common, lru_cache, vers
 from shadowsocks.common import pre_parse_header, parse_header
 
 logging.basicConfig(level=logging.DEBUG)
-
 _obfs = obfs.obfs("auth_aes128_md5")
-#print(_obfs.obfs.max_time_dif)
-
 
 _data = _obfs.init_data()
 
@@ -52,12 +48,12 @@ server_info.buffer_size = 1024
 _obfs.set_server_info(server_info)
 
 
-
-_en = _obfs.client_pre_encrypt("012345678")
+_en = _obfs.client_pre_encrypt("5454451111hello world")
 _de = _obfs.server_post_decrypt(_en)
 
-
-print(_en)
-print(_de)
+print(_de[0])
 
 sys.exit()
+
+
+

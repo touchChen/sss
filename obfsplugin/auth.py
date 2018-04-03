@@ -562,6 +562,10 @@ class auth_aes128_sha1(auth_base):
         data += hmac.new(self.user_key, data, self.hashfunc).digest()[:4]
         return data
 
+    '''
+    return utc + local_client_id + connection_id
+    pack(<I)
+    '''
     def auth_data(self):
         utc_time = int(time.time()) & 0xFFFFFFFF
         if self.server_info.data.connection_id > 0xFF000000:
@@ -578,9 +582,9 @@ class auth_aes128_sha1(auth_base):
     def client_pre_encrypt(self, buf):
         ret = b''
         ogn_data_len = len(buf)
-        logging.debug("buf:%s"%buf)
         if not self.has_sent_header:
             head_size = self.get_head_size(buf, 30)
+            # len is between 0 and 31
             datalen = min(len(buf), random.randint(0, 31) + head_size)
             ret += self.pack_auth_data(self.auth_data(), buf[:datalen])
             buf = buf[datalen:]

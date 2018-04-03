@@ -867,7 +867,7 @@ class TCPRelayHandler(object):
                         logging.error("exception from %s:%d" % (self._client_address[0], self._client_address[1]))
                         self.destroy()
                         return
-                    if obfs_decode[2]: #empty
+                    if obfs_decode[2]: # need to encode and sendback
                         data = self._obfs.server_encode(b'')
                         try:
                             self._write_to_sock(data, self._local_sock)
@@ -972,7 +972,7 @@ class TCPRelayHandler(object):
                     logging.error("exception from %s:%d" % (self._client_address[0], self._client_address[1]))
                     self.destroy()
                     return
-                if obfs_decode[1]:
+                if obfs_decode[1]: # need to encode and sendback
                     send_back = self._obfs.client_encode(b'')
                     self._write_to_sock(send_back, self._remote_sock)
                 if not self._protocol.obfs.server_info.recv_iv:
