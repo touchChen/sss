@@ -25,7 +25,6 @@ import select
 import time
 import argparse
 from subprocess import Popen, PIPE
-from mpmath import loggamma
 
 python = ['python']
 
