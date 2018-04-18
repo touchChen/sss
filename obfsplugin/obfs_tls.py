@@ -268,10 +268,10 @@ class tls_ticket_auth(plain.plain):
             logging.info("tls_auth wrong tls version")
             return self.decode_error_return(ogn_buf)
         buf = buf[2:]
-        verifyid = buf[:32]
+        verifyid = buf[:32]   #random data
         buf = buf[32:]
         sessionid_len = ord(buf[0])
-        if sessionid_len < 32:
+        if sessionid_len < 32: #session must 32
             logging.info("tls_auth wrong sessionid_len")
             return self.decode_error_return(ogn_buf)
         sessionid = buf[1:sessionid_len + 1]

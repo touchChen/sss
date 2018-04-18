@@ -25,7 +25,6 @@ import select
 import time
 import argparse
 from subprocess import Popen, PIPE
-from mpmath import loggamma
 
 python = ['python']
 
@@ -75,11 +74,8 @@ p4 = None
 p3_fin = False
 p4_fin = False
 
-# 1 shadowsocks started
-# 2 curl started
-# 3 curl finished
-# 4 dig started
-# 5 dig finished
+
+
 stage = 1
 
 try:
@@ -128,13 +124,10 @@ try:
             else:
                 if r != 0:
                     sys.exit(1)
+                    
+            break
     
 
-        if stage == 3:
-            print('test passed')
-            break
-            
-           
 finally:
     for p in [p1, p2]:
         try:
