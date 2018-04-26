@@ -485,7 +485,7 @@ class auth_aes128_sha1(auth_base):
             max_client = int(server_info.protocol_param.split('#')[0])
         except:
             max_client = 64
-        logging.info("max_client=%d"%max_client)
+        logging.debug("max_client=%d"%max_client)
         self.server_info.data.set_max_client(max_client)
 
     def trapezoid_random_float(self, d):

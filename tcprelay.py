@@ -584,7 +584,7 @@ class TCPRelayHandler(object):
             return 4 + common.ord(buf[1])
         return def_value
 
-    def _handle_stage_addr2(self, ogn_data, data):
+    def _handle_stage_addr_(self, ogn_data, data):
         try:
             if self._is_local:
                 cmd = common.ord(data[1])
@@ -675,8 +675,84 @@ class TCPRelayHandler(object):
                 traceback.print_exc()
             self.destroy()
             
-            
+   
     def _handle_stage_addr(self, ogn_data, data):
+        is_local = self._is_local
+        if is_local: 
+            self._l_handle_stage_addr(ogn_data, data)
+        else:
+            self._s_handle_stage_addr(ogn_data, data)     
+        
+            
+            
+    def _l_handle_stage_addr(self, ogn_data, data):
+        try:
+            cmd = common.ord(data[1])
+            if cmd == CMD_UDP_ASSOCIATE:
+                logging.debug('UDP associate')
+                if self._local_sock.family == socket.AF_INET6:
+                    header = b'\x05\x00\x00\x04'
+                else:
+                    header = b'\x05\x00\x00\x01'
+                    
+                addr, port = self._local_sock.getsockname()[:2]
+                addr_to_send = socket.inet_pton(self._local_sock.family,
+                                                    addr)
+                port_to_send = struct.pack('>H', port)
+                self._write_to_sock(header + addr_to_send + port_to_send,
+                                        self._local_sock)
+                self._stage = STAGE_UDP_ASSOC
+                # just wait for the client to disconnect
+                return
+            elif cmd == CMD_CONNECT:
+                    # just trim VER CMD RSV
+                data = data[3:]
+            else:
+                logging.error('invalid command %d', cmd)
+                self.destroy()
+                return
+
+
+            header_result = parse_header(data)
+            connecttype, addrtype, remote_addr, remote_port, header_length = header_result
+            if connecttype != 0:
+                pass
+                #common.connect_log('UDP over TCP by user %d' %
+                #        (self._user_id, ))
+            else:
+                common.connect_log('TCP request %s:%d by user %d' %
+                        (common.to_str(remote_addr), remote_port, self._user_id))
+            self._remote_address = (common.to_str(remote_addr), remote_port)
+            self._remote_udp = (connecttype != 0)
+            # pause reading
+            self._update_stream(STREAM_UP, WAIT_STATUS_WRITING)
+            self._stage = STAGE_DNS
+            
+            
+            # forward address to remote
+            self._write_to_sock((b'\x05\x00\x00\x01'
+                                     b'\x00\x00\x00\x00\x10\x10'),
+                                    self._local_sock)
+            head_len = self._get_head_size(data, 30)
+            self._obfs.obfs.server_info.head_len = head_len
+            self._protocol.obfs.server_info.head_len = head_len
+            if self._encryptor is not None:
+                data = self._protocol.client_pre_encrypt(data)
+                data_to_send = self._encryptor.encrypt(data)
+                data_to_send = self._obfs.client_encode(data_to_send)
+            if data_to_send:
+                self._data_to_write_to_remote.append(data_to_send)
+            # notice here may go into _handle_dns_resolved directly
+            self._dns_resolver.resolve(self._chosen_server[0],
+                                           self._handle_dns_resolved)
+            
+        except Exception as e:
+            self._log_error(e)
+            if self._config['verbose']:
+                traceback.print_exc()
+            self.destroy()
+                     
+    def _s_handle_stage_addr(self, ogn_data, data):
         try:
             before_parse_data = data
             
@@ -719,6 +795,7 @@ class TCPRelayHandler(object):
             # notice here may go into _handle_dns_resolved directly
             self._dns_resolver.resolve(remote_addr,
                                            self._handle_dns_resolved)
+            
         except Exception as e:
             self._log_error(e)
             if self._config['verbose']:
@@ -879,7 +956,7 @@ class TCPRelayHandler(object):
             buffer_size = int(buffer_size / frame_size) * frame_size
         return buffer_size
 
-    def _on_local_read2(self):
+    def _on_local_read_(self):
         # handle all local read events and dispatch them to methods for
         # each stage
         if not self._local_sock:
@@ -961,24 +1038,74 @@ class TCPRelayHandler(object):
                 return
         if self._stage == STAGE_STREAM:
             if self._is_local:
-                logging.info("STREAM...")
+                logging.info("STAGE_STREAM...")
                 if self._encryptor is not None:
                     data = self._protocol.client_pre_encrypt(data)
                     data = self._encryptor.encrypt(data)
                     data = self._obfs.client_encode(data)
             self._write_to_sock(data, self._remote_sock)
         elif is_local and self._stage == STAGE_INIT:
+            logging.info("STAGE_INIT...")
             # TODO check auth method
             self._write_to_sock(b'\x05\00', self._local_sock)
             self._stage = STAGE_ADDR
         elif self._stage == STAGE_CONNECTING:
+            logging.info("STAGE_CONNECTING...")
             self._handle_stage_connecting(data)
         elif (is_local and self._stage == STAGE_ADDR) or \
                 (not is_local and self._stage == STAGE_INIT):
+            logging.info("STAGE_ADDR...")
             self._handle_stage_addr(ogn_data, data)
+    
+    def _on_local_read(self): 
+        is_local = self._is_local
+        if is_local: 
+            self._l_on_local_read()
+        else:
+            self._s_on_local_read()        
+    
+    def _l_on_local_read(self):
+        if not self._local_sock:
+            return
+        
+        recv_buffer_size = self._get_read_size(self._local_sock, self._recv_buffer_size, True)
+        
+        data = None
+        try:
+            data = self._local_sock.recv(recv_buffer_size)
+        except (OSError, IOError) as e:
+            if eventloop.errno_from_exception(e) in \
+                    (errno.ETIMEDOUT, errno.EAGAIN, errno.EWOULDBLOCK):
+                return
+        if not data:
+            self.destroy()
+            return
+
+        self.speed_tester_u.add(len(data))
+        self._server.speed_tester_u(self._user_id).add(len(data))
+        ogn_data = data
+        
+        if self._stage == STAGE_INIT:
+            logging.debug("STAGE_INIT...")
+            # TODO check auth method
+            self._write_to_sock(b'\x05\00', self._local_sock)
+            self._stage = STAGE_ADDR
+        elif self._stage == STAGE_ADDR:
+            logging.debug("STAGE_ADDR...")
+            self._handle_stage_addr(ogn_data, data)
+        elif self._stage == STAGE_CONNECTING:
+            logging.info("STAGE_CONNECTING...")
+            logging.debug('local socks data is %s'%data)
+            self._handle_stage_connecting(data)
+        elif self._stage == STAGE_STREAM:
+            logging.debug("STAGE_STREAM...")
+            if self._encryptor is not None:
+                data = self._protocol.client_pre_encrypt(data)
+                data = self._encryptor.encrypt(data)
+                data = self._obfs.client_encode(data)
+            self._write_to_sock(data, self._remote_sock)
             
-    def _on_local_read(self):
-        logging.debug('......local read')
+    def _s_on_local_read(self):
         if not self._local_sock:
             return
         
@@ -1032,8 +1159,10 @@ class TCPRelayHandler(object):
                     data = self._encryptor.decrypt(obfs_decode[0])
                 else:
                     data = obfs_decode[0]
+                    
                 try:
                     data, sendback = self._protocol.server_post_decrypt(data)
+                    '''
                     if sendback: #send empty to client
                         backdata = self._protocol.server_pre_encrypt(b'')
                         backdata = self._encryptor.encrypt(backdata)
@@ -1047,6 +1176,7 @@ class TCPRelayHandler(object):
                             logging.error("exception from %s:%d" % (self._client_address[0], self._client_address[1]))
                             self.destroy()
                             return
+                    '''
                 except Exception as e:
                     shell.print_exception(e)
                     logging.error("exception from %s:%d" % (self._client_address[0], self._client_address[1]))
@@ -1056,16 +1186,19 @@ class TCPRelayHandler(object):
                 return
             if not data:
                 return
-            
-        if self._stage == STAGE_STREAM:
-            logging.debug('...STAGE_STREAM')
-            self._write_to_sock(data, self._remote_sock)
-        elif self._stage == STAGE_CONNECTING:
-            logging.debug('...STAGE_CONNECTING')
-            self._handle_stage_connecting(data)
-        elif self._stage == STAGE_INIT:
-            logging.debug('...STAGE_INIT')
+        
+        logging.debug('data is:%s'%data)   
+         
+         
+        if self._stage == STAGE_INIT:
+            logging.debug('STAGE_INIT')
             self._handle_stage_addr(ogn_data, data)
+        elif self._stage == STAGE_CONNECTING:
+            logging.debug('STAGE_CONNECTING')
+            self._handle_stage_connecting(data)
+        elif self._stage == STAGE_STREAM:
+            logging.debug('STAGE_STREAM')
+            self._write_to_sock(data, self._remote_sock)       
 
     def _on_remote_read(self, is_remote_sock):
         # handle all remote read events
