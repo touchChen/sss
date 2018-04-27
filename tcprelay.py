@@ -1085,6 +1085,8 @@ class TCPRelayHandler(object):
         self._server.speed_tester_u(self._user_id).add(len(data))
         ogn_data = data
         
+        logging.debug('local socks data is %s'%data)
+        
         if self._stage == STAGE_INIT:
             logging.debug("STAGE_INIT...")
             # TODO check auth method
@@ -1095,7 +1097,6 @@ class TCPRelayHandler(object):
             self._handle_stage_addr(ogn_data, data)
         elif self._stage == STAGE_CONNECTING:
             logging.info("STAGE_CONNECTING...")
-            logging.debug('local socks data is %s'%data)
             self._handle_stage_connecting(data)
         elif self._stage == STAGE_STREAM:
             logging.debug("STAGE_STREAM...")
