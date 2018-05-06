@@ -28,7 +28,7 @@ from subprocess import Popen, PIPE
 
 python = ['python']
 
-default_url = 'http://www.baidu.com'
+default_url = 'http://www.jxqx.net'
 
 parser = argparse.ArgumentParser(description='test Shadowsocks')
 parser.add_argument('-c', '--client-conf', type=str, default=None)

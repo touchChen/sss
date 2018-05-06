@@ -26,10 +26,9 @@ import logging
 import binascii
 import traceback
 import random
-import platform
-import threading
 
-from shadowsocks import encrypt, obfs, eventloop, shell, common, lru_cache, version
+
+from shadowsocks import encrypt, obfs, eventloop, shell, common, lru_cache
 from shadowsocks.common import pre_parse_header, parse_header
 
 # we clear at most TIMEOUTS_CLEAN_SIZE timeouts each time
@@ -300,6 +299,7 @@ class TCPRelayHandler(object):
             if self._upstream_status != status:
                 self._upstream_status = status
                 dirty = True
+                
         if dirty:
             if self._local_sock:
                 event = eventloop.POLL_ERR
@@ -754,7 +754,7 @@ class TCPRelayHandler(object):
                      
     def _s_handle_stage_addr(self, ogn_data, data):
         try:
-            before_parse_data = data
+            #before_parse_data = data
             
             data = pre_parse_header(data)
             if data is None:
