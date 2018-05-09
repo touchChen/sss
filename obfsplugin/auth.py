@@ -589,6 +589,7 @@ class auth_aes128_sha1(auth_base):
             ret += self.pack_auth_data(self.auth_data(), buf[:datalen])
             buf = buf[datalen:]
             self.has_sent_header = True
+        
         while len(buf) > self.unit_len:
             ret += self.pack_data(buf[:self.unit_len], ogn_data_len)
             buf = buf[self.unit_len:]
