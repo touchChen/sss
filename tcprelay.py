@@ -1096,7 +1096,7 @@ class TCPRelayHandler(object):
             logging.debug("STAGE_ADDR...")
             self._handle_stage_addr(ogn_data, data)
         elif self._stage == STAGE_CONNECTING:
-            logging.info("STAGE_CONNECTING...")
+            logging.debug("STAGE_CONNECTING...")
             self._handle_stage_connecting(data)
         elif self._stage == STAGE_STREAM:
             logging.debug("STAGE_STREAM...")
