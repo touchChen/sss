@@ -599,6 +599,7 @@ class UDPRelay(object):
         client.destroy_local()
 
     def handle_event(self, sock, fd, event):
+        logging.info("...............udp..........")
         if sock == self._server_socket:
             if event & eventloop.POLL_ERR:
                 logging.error('UDP server_socket err')
