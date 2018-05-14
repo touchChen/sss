@@ -12,58 +12,57 @@ import inspect
 file_path = os.path.dirname(os.path.realpath(inspect.getfile(inspect.currentframe())))
 sys.path.insert(0, os.path.join(file_path, '../../'))
 
-from shadowsocks import encrypt, obfs, eventloop, shell, common, lru_cache, version
-from shadowsocks.common import pre_parse_header, parse_header
+from shadowsocks import common,obfs
+from shadowsocks.obfsplugin import plain, http_simple, obfs_tls, verify, auth, auth_chain
 
-logging.basicConfig(level=logging.DEBUG)
-_obfs = obfs.obfs("auth_aes128_md5")
+
+logging.basicConfig(level=logging.DEBUG,
+                        format='%(asctime)s %(levelname)-8s %(filename)s:%(lineno)s %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S')
+
+
+
+
+_obfs = obfs.obfs("auth_aes128_sha1").get_obfs()
 
 _data = _obfs.init_data()
-
+ 
 server_info = obfs.server_info(_data)
-
-
+ 
+ 
 NETWORK_MTU = 1500
 TCP_MSS = NETWORK_MTU - 40
-
-# server_info.host = config['server']
-# server_info.port = server._listen_port
+ 
 server_info.users = {}
-# server_info.update_user_func = self._update_user
-# server_info.client = self._client_address[0]
-# server_info.client_port = self._client_address[1]
-
 server_info.protocol_param = b''
-
-
 server_info.obfs_param = ''
 server_info.iv = b''
 server_info.recv_iv = b''
-# server_info.key_str = common.to_bytes(config['password'])
 server_info.key = b''
-# server_info.head_len = 30
 server_info.tcp_mss = TCP_MSS
 server_info.buffer_size = 1024
-# server_info.overhead = self._overhead
+
 _obfs.set_server_info(server_info)
-
-
+ 
+ 
 _ens = []
 _en1 = _obfs.client_pre_encrypt("5454451111hello world")
 _ens.append(_en1)
-
+ 
 _en2 = _obfs.client_pre_encrypt("is home")
 _en3 = _obfs.client_pre_encrypt("worrrr")
-
+ 
 _ens.append(_en2)
 _ens.append(_en3)
-
+ 
 _en = b''.join(_ens)
+ 
+_de = _obfs.server_post_decrypt(_en)
 
-_de = _obfs.server_post_decrypt(_en1)
 
+ 
 print(_de)
-
+ 
 sys.exit()
 
 

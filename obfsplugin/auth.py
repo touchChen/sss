@@ -541,6 +541,7 @@ class auth_aes128_sha1(auth_base):
             rnd_len = struct.unpack('<H', os.urandom(2))[0] % 1024
         data = auth_data
         data_len = 7 + 4 + 16 + 4 + len(buf) + rnd_len + 4
+        # data:12b, date_len:2b, rnd_len:2b
         data = data + struct.pack('<H', data_len) + struct.pack('<H', rnd_len)
         mac_key = self.server_info.iv + self.server_info.key
         uid = os.urandom(4)
@@ -554,12 +555,12 @@ class auth_aes128_sha1(auth_base):
         if self.user_key is None:
             self.user_key = self.server_info.key
         encryptor = encrypt.Encryptor(to_bytes(base64.b64encode(self.user_key)) + self.salt, 'aes-128-cbc', b'\x00' * 16)
-        data = uid + encryptor.encrypt(data)[16:]
+        data = uid + encryptor.encrypt(data)[16:] #data is:20b
         data += hmac.new(mac_key, data, self.hashfunc).digest()[:4]
         check_head = os.urandom(1)
         check_head += hmac.new(mac_key, check_head, self.hashfunc).digest()[:6]
-        data = check_head + data + os.urandom(rnd_len) + buf
-        data += hmac.new(self.user_key, data, self.hashfunc).digest()[:4]
+        data = check_head + data + os.urandom(rnd_len) + buf # 7 + 16 + 4 +4 + rnd_len + len(buf)
+        data += hmac.new(self.user_key, data, self.hashfunc).digest()[:4] # +4
         return data
 
     '''
@@ -568,6 +569,7 @@ class auth_aes128_sha1(auth_base):
     '''
     def auth_data(self):
         utc_time = int(time.time()) & 0xFFFFFFFF
+        
         if self.server_info.data.connection_id > 0xFF000000:
             self.server_info.data.local_client_id = b''
         if not self.server_info.data.local_client_id:
@@ -575,16 +577,18 @@ class auth_aes128_sha1(auth_base):
             logging.debug("local_client_id %s" % (binascii.hexlify(self.server_info.data.local_client_id),))
             self.server_info.data.connection_id = struct.unpack('<I', os.urandom(4))[0] & 0xFFFFFF
         self.server_info.data.connection_id += 1
-        return b''.join([struct.pack('<I', utc_time),
-                self.server_info.data.local_client_id,
-                struct.pack('<I', self.server_info.data.connection_id)])
+        return b''.join([struct.pack('<I', utc_time), # 4b string
+                self.server_info.data.local_client_id, # 4b string
+                struct.pack('<I', self.server_info.data.connection_id)]) # 4b string
 
     def client_pre_encrypt(self, buf):
+        logging.debug("client_pre_encrypt")
         ret = b''
         ogn_data_len = len(buf)
         if not self.has_sent_header:
             head_size = self.get_head_size(buf, 30)
-            # len is between 0 and 31
+            
+            #datalen is very random
             datalen = min(len(buf), random.randint(0, 31) + head_size)
             ret += self.pack_auth_data(self.auth_data(), buf[:datalen])
             buf = buf[datalen:]

@@ -151,8 +151,8 @@ class TCPRelayHandler(object):
         # if is_local, this is sslocal
         self._is_local = is_local
         self._encrypt_correct = True
-        self._obfs = obfs.obfs(config['obfs'])
-        self._protocol = obfs.obfs(config['protocol'])
+        self._obfs = obfs.obfs(config['obfs']).get_obfs()
+        self._protocol = obfs.obfs(config['protocol']).get_obfs()
         self._overhead = self._obfs.get_overhead(self._is_local) + self._protocol.get_overhead(self._is_local)
         self._recv_buffer_size = BUF_SIZE - self._overhead
 
@@ -642,8 +642,8 @@ class TCPRelayHandler(object):
                                      b'\x00\x00\x00\x00\x10\x10'),
                                     self._local_sock)
             head_len = self._get_head_size(data, 30)
-            self._obfs.obfs.server_info.head_len = head_len
-            self._protocol.obfs.server_info.head_len = head_len
+            self._obfs.server_info.head_len = head_len
+            self._protocol.server_info.head_len = head_len
             if self._encryptor is not None:
                 data = self._protocol.client_pre_encrypt(data)
                 data_to_send = self._encryptor.encrypt(data)
@@ -963,9 +963,9 @@ class TCPRelayHandler(object):
                         self.destroy()
                         return
                 if obfs_decode[1]:
-                    if not self._protocol.obfs.server_info.recv_iv: #what is revce_iv?
-                        iv_len = len(self._protocol.obfs.server_info.iv)
-                        self._protocol.obfs.server_info.recv_iv = obfs_decode[0][:iv_len]
+                    if not self._protocol.server_info.recv_iv: #what is revce_iv?
+                        iv_len = len(self._protocol.server_info.iv)
+                        self._protocol.server_info.recv_iv = obfs_decode[0][:iv_len]
                     data = self._encryptor.decrypt(obfs_decode[0])
                 else:
                     data = obfs_decode[0]
@@ -1058,9 +1058,9 @@ class TCPRelayHandler(object):
                 if obfs_decode[1]: # need to encode and sendback
                     send_back = self._obfs.client_encode(b'')
                     self._write_to_sock(send_back, self._remote_sock)
-                if not self._protocol.obfs.server_info.recv_iv:
-                    iv_len = len(self._protocol.obfs.server_info.iv)
-                    self._protocol.obfs.server_info.recv_iv = obfs_decode[0][:iv_len]
+                if not self._protocol.server_info.recv_iv:
+                    iv_len = len(self._protocol.server_info.iv)
+                    self._protocol.server_info.recv_iv = obfs_decode[0][:iv_len]
                 data = self._encryptor.decrypt(obfs_decode[0])
                 try:
                     data = self._protocol.client_post_decrypt(data)
@@ -1271,8 +1271,8 @@ class TCPRelay(object):
         self._speed_tester_u = {}
         self._speed_tester_d = {}
         self.server_connections = 0
-        self.protocol_data = obfs.obfs(config['protocol']).init_data()
-        self.obfs_data = obfs.obfs(config['obfs']).init_data()
+        self.protocol_data = obfs.obfs(config['protocol']).get_obfs().init_data()
+        self.obfs_data = obfs.obfs(config['obfs']).get_obfs().init_data()
 
         if config.get('connect_verbose_info', 0) > 0:
             common.connect_log = logging.info

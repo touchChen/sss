@@ -23,6 +23,7 @@ import os
 import signal
 import select
 import time
+import struct
 import argparse
 from subprocess import Popen, PIPE
 
@@ -35,5 +36,14 @@ from shadowsocks import encrypt, obfs, eventloop, shell, common, lru_cache
 from shadowsocks.common import pre_parse_header, parse_header
 
 
-o = common.ord('8')
-print(o)
+# o = common.ord('8')
+# print(o)
+
+u = os.urandom(1)
+print(u)
+u = 'A'
+c = struct.unpack('<B', u)[0]
+print(c)
+c = c+1
+_u = struct.pack('<B',c)
+print(_u)
