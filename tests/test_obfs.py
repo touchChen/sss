@@ -46,11 +46,11 @@ _obfs.set_server_info(server_info)
  
  
 _ens = []
-_en1 = _obfs.client_pre_encrypt("5454451111hello world")
+_en1 = _obfs.client_pre_encrypt("5454451111hello world, ")
 _ens.append(_en1)
  
-_en2 = _obfs.client_pre_encrypt("is home")
-_en3 = _obfs.client_pre_encrypt("worrrr")
+_en2 = _obfs.client_pre_encrypt("  is home,")
+_en3 = _obfs.client_pre_encrypt("  worrrr.")
  
 _ens.append(_en2)
 _ens.append(_en3)

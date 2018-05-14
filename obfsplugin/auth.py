@@ -582,7 +582,6 @@ class auth_aes128_sha1(auth_base):
                 struct.pack('<I', self.server_info.data.connection_id)]) # 4b string
 
     def client_pre_encrypt(self, buf):
-        logging.debug("client_pre_encrypt")
         ret = b''
         ogn_data_len = len(buf)
         if not self.has_sent_header:
@@ -661,6 +660,7 @@ class auth_aes128_sha1(auth_base):
                 sha1data = hmac.new(mac_key, self.recv_buf[:1], self.hashfunc).digest()[:recv_len - 1]
                 if sha1data != self.recv_buf[1:recv_len]:
                     return self.not_match_return(self.recv_buf)
+                
 
             if len(self.recv_buf) < 31:
                 return (b'', False)
