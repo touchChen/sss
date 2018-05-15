@@ -29,21 +29,40 @@ from subprocess import Popen, PIPE
 
 import inspect
 
+import hmac
+import hashlib
+
 file_path = os.path.dirname(os.path.realpath(inspect.getfile(inspect.currentframe())))
 sys.path.insert(0, os.path.join(file_path, '../../'))
 
 from shadowsocks import encrypt, obfs, eventloop, shell, common, lru_cache
 from shadowsocks.common import pre_parse_header, parse_header
 
+from shadowsocks.obfsplugin import aa
+
+
+c = 'hello world'
+hashfunc = hashlib.md5
+
+salt = hashfunc == hashlib.md5 and b"auth_aes128_md5" or b"auth_aes128_sha1"
+
+
+_c = hmac.new('q', c, hashfunc).digest()[:2]
+
+
+print(_c)
+
+hw()
+
 
 # o = common.ord('8')
 # print(o)
 
-u = os.urandom(1)
-print(u)
-u = 'A'
-c = struct.unpack('<B', u)[0]
-print(c)
-c = c+1
-_u = struct.pack('<B',c)
-print(_u)
+# u = os.urandom(1)
+# print(u)
+# u = 'A'
+# c = struct.unpack('<B', u)[0]
+# print(c)
+# c = c+1
+# _u = struct.pack('<B',c)
+# print(_u)

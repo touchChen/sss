@@ -13,7 +13,7 @@ file_path = os.path.dirname(os.path.realpath(inspect.getfile(inspect.currentfram
 sys.path.insert(0, os.path.join(file_path, '../../'))
 
 from shadowsocks import common,obfs
-from shadowsocks.obfsplugin import plain, http_simple, obfs_tls, verify, auth, auth_chain
+from shadowsocks.obfsplugin import auth_data
 
 
 logging.basicConfig(level=logging.DEBUG,
@@ -22,12 +22,9 @@ logging.basicConfig(level=logging.DEBUG,
 
 
 
+_obfs = auth_data.create_auth_data('auth_data')
 
-_obfs = obfs.obfs("auth_aes128_sha1").get_obfs()
-
-_data = _obfs.init_data()
- 
-server_info = obfs.server_info(_data)
+server_info = _obfs.init_server_info()
  
  
 NETWORK_MTU = 1500
