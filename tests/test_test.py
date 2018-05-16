@@ -24,6 +24,7 @@ import signal
 import select
 import time
 import struct
+import random
 import argparse
 from subprocess import Popen, PIPE
 
@@ -40,20 +41,9 @@ from shadowsocks.common import pre_parse_header, parse_header
 
 from shadowsocks.obfsplugin import aa
 
+s = random.random()
 
-c = 'hello world'
-hashfunc = hashlib.md5
-
-salt = hashfunc == hashlib.md5 and b"auth_aes128_md5" or b"auth_aes128_sha1"
-
-
-_c = hmac.new('q', c, hashfunc).digest()[:2]
-
-
-print(_c)
-
-hw()
-
+print(s)
 
 # o = common.ord('8')
 # print(o)

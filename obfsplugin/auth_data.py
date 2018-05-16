@@ -226,7 +226,7 @@ class auth_data(auth_base):
         if full_buf_size >= self.server_info.buffer_size:
             return 0
         tcp_mss = self.server_info.tcp_mss
-        rev_len = tcp_mss - buf_size - 9
+        rev_len = tcp_mss - buf_size - 7
         if rev_len == 0:
             return 0
         if rev_len < 0:
@@ -246,13 +246,14 @@ class auth_data(auth_base):
         return common.chr(255) + struct.pack('<H', data_len + 1) + os.urandom(data_len - 2)
 
     def pack_data(self, buf, full_buf_size):
+        logging.debug("pack_data:%s"%buf)
         data = self.rnd_data(len(buf), full_buf_size) + buf
-        data_len = len(data) + 8
+        data_len = len(data) + 2 + 4
         mac_key = self.user_key + struct.pack('<I', self.pack_id)
-        mac = hmac.new(mac_key, struct.pack('<H', data_len), self.hashfunc).digest()[:2]
-        data = struct.pack('<H', data_len) + mac + data
+        data = struct.pack('<H', data_len) +  data
         data += hmac.new(mac_key, data, self.hashfunc).digest()[:4]
         self.pack_id = (self.pack_id + 1) & 0xFFFFFFFF
+        
         return data
 
     def pack_auth_data(self, auth_data, buf):
@@ -263,7 +264,7 @@ class auth_data(auth_base):
         else:
             rnd_len = struct.unpack('<H', os.urandom(2))[0] % 1024
         data = auth_data
-        data_len = 7 + 4 + 16 + 4 + len(buf) + rnd_len + 4
+        data_len = 7 + 4 + 16 + 4 + len(buf) + (rnd_len + 4) + 4
         # data:12b, date_len:2b, rnd_len:2b
         data = data + struct.pack('<H', data_len) + struct.pack('<H', rnd_len)
         mac_key = self.server_info.iv + self.server_info.key
@@ -282,7 +283,9 @@ class auth_data(auth_base):
         data += hmac.new(mac_key, data, self.hashfunc).digest()[:4]
         check_head = os.urandom(1)
         check_head += hmac.new(mac_key, check_head, self.hashfunc).digest()[:6]
-        data = check_head + data + os.urandom(rnd_len) + buf # 7 + 16 + 4 +4 + rnd_len + len(buf)
+        rnd_data = os.urandom(rnd_len)
+        rnd_data += hmac.new('tc', rnd_data, self.hashfunc).digest()[:4]
+        data = check_head + data + rnd_data + buf # 7 + 16 + 4 +4 + rnd_len + len(buf)
         data += hmac.new(self.user_key, data, self.hashfunc).digest()[:4] # +4
         return data
 
@@ -297,8 +300,9 @@ class auth_data(auth_base):
             self.data.local_client_id = b''
         if not self.data.local_client_id:
             self.data.local_client_id = os.urandom(4)
-            logging.debug("local_client_id %s" % (binascii.hexlify(self.data.local_client_id),))
+            logging.debug("en_local_client_id %s" % (binascii.hexlify(self.data.local_client_id),))
             self.data.connection_id = struct.unpack('<I', os.urandom(4))[0] & 0xFFFFFF
+            logging.debug("en_connection_id %d" % self.data.connection_id)
         self.data.connection_id += 1
         return b''.join([struct.pack('<I', utc_time), # 4b string
                 self.data.local_client_id, # 4b string
@@ -309,6 +313,8 @@ class auth_data(auth_base):
         ogn_data_len = len(buf)
         if not self.has_sent_header:
             head_size = self.get_head_size(buf, 30)
+            
+            logging.debug('head_size:%d'%head_size)
             
             #datalen is very random
             datalen = min(len(buf), random.randint(0, 31) + head_size)
@@ -328,13 +334,10 @@ class auth_data(auth_base):
             return buf
         self.recv_buf += buf
         out_buf = b''
-        while len(self.recv_buf) > 4:
+        while len(self.recv_buf) > 2:
             mac_key = self.user_key + struct.pack('<I', self.recv_id)
-            mac = hmac.new(mac_key, self.recv_buf[:2], self.hashfunc).digest()[:2]
-            if mac != self.recv_buf[2:4]:
-                raise Exception('client_post_decrypt data uncorrect mac')
             length = struct.unpack('<H', self.recv_buf[:2])[0]
-            if length >= 8192 or length < 7:
+            if length >= 8192 or length < 6:
                 self.raw_trans = True
                 self.recv_buf = b''
                 raise Exception('client_post_decrypt data error')
@@ -347,11 +350,11 @@ class auth_data(auth_base):
                 raise Exception('client_post_decrypt data uncorrect checksum')
 
             self.recv_id = (self.recv_id + 1) & 0xFFFFFFFF
-            pos = common.ord(self.recv_buf[4])
+            pos = common.ord(self.recv_buf[2])
             if pos < 255:
-                pos += 4
+                pos += 2
             else:
-                pos = struct.unpack('<H', self.recv_buf[5:7])[0] + 4
+                pos = struct.unpack('<H', self.recv_buf[3:5])[0] + 2
             out_buf += self.recv_buf[pos:length - 4]
             self.recv_buf = self.recv_buf[length:]
 
@@ -396,6 +399,7 @@ class auth_data(auth_base):
 
             uid = self.recv_buf[7:11]
             if uid in self.server_info.users:
+                logging.debug('uid in users')
                 self.user_id = uid
                 self.user_key = self.hashfunc(self.server_info.users[uid]).digest()
                 self.server_info.update_user_func(uid)
@@ -418,15 +422,20 @@ class auth_data(auth_base):
             if hmac.new(self.user_key, self.recv_buf[:length - 4], self.hashfunc).digest()[:4] != self.recv_buf[length - 4:length]:
                 logging.info('%s: checksum error, data %s' % (self.no_compatible_method, binascii.hexlify(self.recv_buf[:length])))
                 return self.not_match_return(self.recv_buf)
+            
             time_dif = common.int32(utc_time - (int(time.time()) & 0xffffffff))
             if time_dif < -self.max_time_dif or time_dif > self.max_time_dif:
                 logging.info('%s: wrong timestamp, time_dif %d, data %s' % (self.no_compatible_method, time_dif, binascii.hexlify(head)))
                 return self.not_match_return(self.recv_buf)
             elif self.data.insert(self.user_id, client_id, connection_id):
                 self.has_recv_header = True
-                out_buf = self.recv_buf[31 + rnd_len:length - 4]
+                out_buf = self.recv_buf[31 + rnd_len + 4:length - 4]
                 self.client_id = client_id
                 self.connection_id = connection_id
+                
+                client_id = struct.pack('<I', client_id)
+                logging.debug("de_local_client_id %s" % (binascii.hexlify(client_id),))
+                logging.debug("de_connection_id %d" % connection_id)
             else:
                 logging.info('%s: auth fail, data %s' % (self.no_compatible_method, binascii.hexlify(out_buf)))
                 return self.not_match_return(self.recv_buf)
@@ -434,19 +443,12 @@ class auth_data(auth_base):
             self.has_recv_header = True
             sendback = True
 
-        while len(self.recv_buf) > 4:
+        #pack_data
+        while len(self.recv_buf) > 2:
             mac_key = self.user_key + struct.pack('<I', self.recv_id)
-            mac = hmac.new(mac_key, self.recv_buf[:2], self.hashfunc).digest()[:2]
-            if mac != self.recv_buf[2:4]:
-                self.raw_trans = True
-                logging.info(self.no_compatible_method + ': wrong crc')
-                if self.recv_id == 0:
-                    logging.info(self.no_compatible_method + ': wrong crc')
-                    return (b'E'*2048, False)
-                else:
-                    raise Exception('server_post_decrype data error')
+
             length = struct.unpack('<H', self.recv_buf[:2])[0]
-            if length >= 8192 or length < 7:
+            if length >= 8192 or length < 6:
                 self.raw_trans = True
                 self.recv_buf = b''
                 if self.recv_id == 0:
@@ -455,7 +457,10 @@ class auth_data(auth_base):
                 else:
                     raise Exception('server_post_decrype data error')
             if length > len(self.recv_buf):
+                raise Exception('length is error')
                 break
+            
+            logging.debug('it is ok....')
 
             if hmac.new(mac_key, self.recv_buf[:length - 4], self.hashfunc).digest()[:4] != self.recv_buf[length - 4:length]:
                 logging.info('%s: checksum error, data %s' % (self.no_compatible_method, binascii.hexlify(self.recv_buf[:length])))
@@ -467,11 +472,11 @@ class auth_data(auth_base):
                     raise Exception('server_post_decrype data uncorrect checksum')
 
             self.recv_id = (self.recv_id + 1) & 0xFFFFFFFF
-            pos = common.ord(self.recv_buf[4])
+            pos = common.ord(self.recv_buf[2])
             if pos < 255:
-                pos += 4
+                pos += 2
             else:
-                pos = struct.unpack('<H', self.recv_buf[5:7])[0] + 4
+                pos = struct.unpack('<H', self.recv_buf[3:5])[0] + 2
             out_buf += self.recv_buf[pos:length - 4]
             self.recv_buf = self.recv_buf[length:]
             if pos == length - 4:
