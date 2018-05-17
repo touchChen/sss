@@ -35,6 +35,7 @@ NETWORK_MTU = 1500
 TCP_MSS = NETWORK_MTU - 40
  
 server_info.users = {}
+#server_info.protocol_param = b'22#123456:p123,23121:p123'
 server_info.protocol_param = b''
 server_info.iv = b''
 server_info.recv_iv = b''
@@ -46,33 +47,31 @@ _obfs.set_server_info(server_info)
  
  
 _ens = []
-_en1 = _obfs.client_pre_encrypt("5454451111hello world, 11gggggggggggggggggg2 hhpp 00 66, ")
-_ens.append(_en1)
-  
+_en1 = _obfs.client_pre_encrypt("66666")
 _en2 = _obfs.client_pre_encrypt("  is home,")
 _en3 = _obfs.client_pre_encrypt("  worrrr.")
+
+_ens.append(_en1)
 _ens.append(_en2)
 _ens.append(_en3)
   
 _en = b''.join(_ens)
-  
 _de = _obfs.server_post_decrypt(_en)
  
 _en5 = _obfs.client_pre_encrypt(" 999 ")
- 
 _de3 = _obfs.server_post_decrypt(_en5)
  
  
 print(_de)
- 
 print(_de3)
  
 print()
 print()
 
+
 c_en = _obfs.server_pre_encrypt("server_encrypt")
 c_de = _obfs.client_post_decrypt(c_en)
-
+ 
 print(c_de)
 
 
