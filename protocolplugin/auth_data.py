@@ -20,7 +20,6 @@ import hashlib
 
 import shadowsocks
 from shadowsocks import common, lru_cache, encrypt
-from shadowsocks.obfsplugin import plain
 from shadowsocks.common import to_bytes, to_str, ord, chr
 
 
@@ -28,17 +27,9 @@ def create_auth_data(method):
     return auth_data(method, hashlib.md5)
 
 
-obfs_map = {
-        'auth_data': (create_auth_data,),
-}
-
-
-class server_info(object):
-    pass
-
-class auth_base(plain.plain):
+class auth_base(object):
     def __init__(self, method):
-        super(auth_base, self).__init__(method)
+        #super(auth_base, self).__init__(method)
         self.method = method
         self.no_compatible_method = ''
         self.overhead = 7
@@ -70,6 +61,19 @@ class auth_base(plain.plain):
         if self.method == self.no_compatible_method:
             return (b'E'*2048, False)
         return (buf, False)
+    
+    def get_head_size(self, buf, def_value):
+        if len(buf) < 2:
+            return def_value
+        head_type = ord(buf[0]) & 0x7
+        if head_type == 1:
+            return 7
+        if head_type == 4:
+            return 19
+        if head_type == 3:
+            return 4 + ord(buf[1])
+        
+        return def_value
 
 
 class auth_data(auth_base):
@@ -100,9 +104,6 @@ class auth_data(auth_base):
     def get_overhead(self, direction): # direction: true for c->s false for s->c
         return self.overhead
 
-    def set_server_info(self, server_info):
-        self.server_info = server_info
-
     def trapezoid_random_float(self, d):
         if d == 0:
             return random.random()
@@ -115,9 +116,9 @@ class auth_data(auth_base):
         return int(v * max_val)
 
     def rnd_data_len(self, buf_size, full_buf_size):
-        if full_buf_size >= self.server_info.buffer_size:
+        if full_buf_size >= self.server_info['buffer_size']:
             return 0
-        tcp_mss = self.server_info.tcp_mss
+        tcp_mss = self.server_info['tcp_mss']
         rev_len = tcp_mss - buf_size - 7
         if rev_len == 0:
             return 0
@@ -158,7 +159,7 @@ class auth_data(auth_base):
         data_len = 7 + 4 + 16 + 4 + len(buf) + (rnd_len + 4) + 4
         # data:12b, date_len:2b, rnd_len:2b
         data = data + struct.pack('<H', data_len) + struct.pack('<H', rnd_len)
-        mac_key = self.server_info.iv + self.server_info.key
+        mac_key = self.server_info['iv'] + self.server_info['key']
         uid = os.urandom(4)
        
         encryptor = encrypt.Encryptor(to_bytes(base64.b64encode(self.user_key)) + self.salt, 'aes-128-cbc', b'\x00' * 16)
@@ -262,7 +263,7 @@ class auth_data(auth_base):
         if not self.has_recv_header:
             if len(self.recv_buf) >= 7 or len(self.recv_buf) in [2, 3]:
                 recv_len = min(len(self.recv_buf), 7)
-                mac_key = self.server_info.recv_iv + self.server_info.key
+                mac_key = self.server_info['recv_iv'] + self.server_info['key']
                 sha1data = hmac.new(mac_key, self.recv_buf[:1], self.hashfunc).digest()[:recv_len - 1]
                 if sha1data != self.recv_buf[1:recv_len]:
                     return self.not_match_return(self.recv_buf)
@@ -272,7 +273,7 @@ class auth_data(auth_base):
                 return (b'', False)
             sha1data = hmac.new(mac_key, self.recv_buf[7:27], self.hashfunc).digest()[:4]
             if sha1data != self.recv_buf[27:31]:
-                logging.error('%s data uncorrect auth HMAC-SHA1 from %s:%d, data %s' % (self.no_compatible_method, self.server_info.client, self.server_info.client_port, binascii.hexlify(self.recv_buf)))
+                logging.error('%s data uncorrect auth HMAC-SHA1 from %s:%d, data %s' % (self.no_compatible_method, self.server_info['client'], self.server_info['client_port'], binascii.hexlify(self.recv_buf)))
                 if len(self.recv_buf) < 39 + self.extra_wait_size:
                     return (b'', False)
                 return self.not_match_return(self.recv_buf)

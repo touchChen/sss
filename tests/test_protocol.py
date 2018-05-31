@@ -12,11 +12,9 @@ import inspect
 file_path = os.path.dirname(os.path.realpath(inspect.getfile(inspect.currentframe())))
 sys.path.insert(0, os.path.join(file_path, '../../'))
 
-from shadowsocks import common,obfs
-from shadowsocks.obfsplugin import auth_data
+from shadowsocks import common
+from shadowsocks.protocolplugin import auth_data
 
-class _(object):
-    pass
 
 logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(levelname)-8s %(filename)s:%(lineno)s %(message)s',
@@ -26,22 +24,20 @@ logging.basicConfig(level=logging.DEBUG,
 
 _obfs = auth_data.create_auth_data('auth_data')
 
-#server_info = _obfs.init_server_info()
-
-server_info = _()
+server_info = {}
  
  
 NETWORK_MTU = 1500
 TCP_MSS = NETWORK_MTU - 40
  
-server_info.users = {}
-#server_info.protocol_param = b'22#123456:p123,23121:p123'
-server_info.protocol_param = b''
-server_info.iv = b''
-server_info.recv_iv = b''
-server_info.key = b''
-server_info.tcp_mss = TCP_MSS
-server_info.buffer_size = 1024
+
+
+server_info['protocol_param'] = b''
+server_info['iv'] = b''
+server_info['recv_iv'] = b''
+server_info['key'] = b''
+server_info['tcp_mss'] = TCP_MSS
+server_info['buffer_size'] = 1024
 
 _obfs.set_server_info(server_info)
  
