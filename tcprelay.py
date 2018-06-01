@@ -152,8 +152,8 @@ class TCPRelayHandler(object):
         self._is_local = is_local
         self._encrypt_correct = True
         self._obfs = obfs.obfs(config['obfs']).get_obfs()
-        self._protocol = obfs.obfs(config['protocol']).get_obfs()
-        self._overhead = self._obfs.get_overhead(self._is_local) + self._protocol.get_overhead(self._is_local)
+        #self._protocol = obfs.obfs(config['protocol']).get_obfs()
+        self._overhead = self._obfs.get_overhead(self._is_local) + 9 #+ self._protocol.get_overhead(self._is_local)
         self._recv_buffer_size = BUF_SIZE - self._overhead
 
         server_info = obfs.server_info(server.obfs_data)
@@ -175,24 +175,38 @@ class TCPRelayHandler(object):
         server_info.overhead = self._overhead
         self._obfs.set_server_info(server_info)
 
-        server_info = obfs.server_info(server.protocol_data)
-        server_info.host = config['server']
-        server_info.port = server._listen_port
-        server_info.users = server.server_users
-        server_info.update_user_func = self._update_user
-        server_info.client = self._client_address[0]
-        server_info.client_port = self._client_address[1]
-        server_info.protocol_param = config['protocol_param']
-        server_info.obfs_param = ''
-        server_info.iv = self._encryptor.cipher_iv
-        server_info.recv_iv = b''
-        server_info.key_str = common.to_bytes(config['password'])
-        server_info.key = self._encryptor.cipher_key
-        server_info.head_len = 30
-        server_info.tcp_mss = self._tcp_mss
-        server_info.buffer_size = self._recv_buffer_size
-        server_info.overhead = self._overhead
-        self._protocol.set_server_info(server_info)
+#         server_info = obfs.server_info(server.protocol_data)
+#         server_info.host = config['server']
+#         server_info.port = server._listen_port
+#         server_info.users = server.server_users
+#         server_info.update_user_func = self._update_user
+#         server_info.client = self._client_address[0]
+#         server_info.client_port = self._client_address[1]
+#         server_info.protocol_param = config['protocol_param']
+#         server_info.obfs_param = ''
+#         server_info.iv = self._encryptor.cipher_iv
+#         server_info.recv_iv = b''
+#         server_info.key_str = common.to_bytes(config['password'])
+#         server_info.key = self._encryptor.cipher_key
+#         server_info.head_len = 30
+#         server_info.tcp_mss = self._tcp_mss
+#         server_info.buffer_size = self._recv_buffer_size
+#         server_info.overhead = self._overhead
+#         self._protocol.set_server_info(server_info)
+
+
+        protocol_info = {}
+        protocol_info['protocol_param'] = b''
+        protocol_info['iv'] = protocol_info['recv_iv'] = b'2'
+
+        protocol_info['key'] = b'19999'
+        protocol_info['tcp_mss'] = TCP_MSS
+        protocol_info['buffer_size'] = 1024
+
+        from shadowsocks.protocolplugin import auth_data
+        self._protocol = auth_data.create_auth_data(protocol_info)
+        
+        
 
         self._redir_list = config.get('redirect', ["*#0.0.0.0:0"])
         self._is_redirect = False
@@ -643,7 +657,7 @@ class TCPRelayHandler(object):
                                     self._local_sock)
             head_len = self._get_head_size(data, 30)
             self._obfs.server_info.head_len = head_len
-            self._protocol.server_info.head_len = head_len
+            #self._protocol.server_info.head_len = head_len
             if self._encryptor is not None:
                 data = self._protocol.client_pre_encrypt(data)
                 data_to_send = self._encryptor.encrypt(data)
@@ -679,12 +693,12 @@ class TCPRelayHandler(object):
                 data = self._handel_protocol_error(self._client_address, ogn_data)
                 header_result = parse_header(data)
                 
-            self._overhead = self._obfs.get_overhead(self._is_local) + self._protocol.get_overhead(self._is_local)
+            self._overhead = self._obfs.get_overhead(self._is_local) +9 # + self._protocol.get_overhead(self._is_local)
             self._recv_buffer_size = BUF_SIZE - self._overhead
             server_info = self._obfs.get_server_info()
             server_info.buffer_size = self._recv_buffer_size
-            server_info = self._protocol.get_server_info()
-            server_info.buffer_size = self._recv_buffer_size
+#             server_info = self._protocol.get_server_info()
+#             server_info.buffer_size = self._recv_buffer_size
             
             connecttype, addrtype, remote_addr, remote_port, header_length = header_result
             if connecttype != 0:
@@ -963,9 +977,9 @@ class TCPRelayHandler(object):
                         self.destroy()
                         return
                 if obfs_decode[1]:
-                    if not self._protocol.server_info.recv_iv: #what is revce_iv?
-                        iv_len = len(self._protocol.server_info.iv)
-                        self._protocol.server_info.recv_iv = obfs_decode[0][:iv_len]
+#                     if not self._protocol.server_info.recv_iv: #what is revce_iv?
+#                         iv_len = len(self._protocol.server_info.iv)
+#                         self._protocol.server_info.recv_iv = obfs_decode[0][:iv_len]
                     data = self._encryptor.decrypt(obfs_decode[0])
                 else:
                     data = obfs_decode[0]
@@ -1058,14 +1072,15 @@ class TCPRelayHandler(object):
                 if obfs_decode[1]: # need to encode and sendback
                     send_back = self._obfs.client_encode(b'')
                     self._write_to_sock(send_back, self._remote_sock)
-                if not self._protocol.server_info.recv_iv:
-                    iv_len = len(self._protocol.server_info.iv)
-                    self._protocol.server_info.recv_iv = obfs_decode[0][:iv_len]
+#                 if not self._protocol.server_info.recv_iv:
+#                     iv_len = len(self._protocol.server_info.iv)
+#                     self._protocol.server_info.recv_iv = obfs_decode[0][:iv_len]
                 data = self._encryptor.decrypt(obfs_decode[0])
                 try:
                     data = self._protocol.client_post_decrypt(data)
                     if self._recv_pack_id == 1:
-                        self._tcp_mss = self._protocol.get_server_info().tcp_mss
+                        #self._tcp_mss = self._protocol.get_server_info().tcp_mss
+                        self._tcp_mss = TCP_MSS
                 except Exception as e:
                     shell.print_exception(e)
                     logging.error("exception from %s:%d" % (self._client_address[0], self._client_address[1]))
@@ -1271,7 +1286,7 @@ class TCPRelay(object):
         self._speed_tester_u = {}
         self._speed_tester_d = {}
         self.server_connections = 0
-        self.protocol_data = obfs.obfs(config['protocol']).get_obfs().init_data()
+        #self.protocol_data = obfs.obfs(config['protocol']).get_obfs().init_data()
         self.obfs_data = obfs.obfs(config['obfs']).get_obfs().init_data()
 
         if config.get('connect_verbose_info', 0) > 0:

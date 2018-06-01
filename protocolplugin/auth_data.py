@@ -23,25 +23,17 @@ from shadowsocks import common, lru_cache, encrypt
 from shadowsocks.common import to_bytes, to_str, ord, chr
 
 
-def create_auth_data(method):
-    return auth_data(method, hashlib.md5)
+def create_auth_data(server_info):
+    return auth_data(server_info, hashlib.md5)
 
 
-class auth_base(object):
-    def __init__(self, method):
-        #super(auth_base, self).__init__(method)
-        self.method = method
+class protocol_base(object):
+    def __init__(self):
         self.no_compatible_method = ''
         self.overhead = 7
 
-    def init_data(self):
-        return ''
-
     def get_overhead(self, direction): # direction: true for c->s false for s->c
         return self.overhead
-
-    def set_server_info(self, server_info):
-        self.server_info = server_info
 
     def client_encode(self, buf):
         return buf
@@ -58,9 +50,7 @@ class auth_base(object):
     def not_match_return(self, buf):
         self.raw_trans = True
         self.overhead = 0
-        if self.method == self.no_compatible_method:
-            return (b'E'*2048, False)
-        return (buf, False)
+        return (b'E'*2048, False)
     
     def get_head_size(self, buf, def_value):
         if len(buf) < 2:
@@ -74,11 +64,15 @@ class auth_base(object):
             return 4 + ord(buf[1])
         
         return def_value
+    
+    
+    def dispose(self):
+        pass
 
 
-class auth_data(auth_base):
-    def __init__(self, method, hashfunc):
-        super(auth_data, self).__init__(method)
+class auth_data(protocol_base):
+    def __init__(self, server_info, hashfunc):
+        super(auth_data, self).__init__()
         self.hashfunc = hashfunc
         self.recv_buf = b''
         self.unit_len = 8100
@@ -88,22 +82,20 @@ class auth_data(auth_base):
         self.client_id = 0
         self.connection_id = 0
         self.max_time_dif = 60 * 60 * 24 # time dif (second) setting
-        self.salt = hashfunc == hashlib.md5 and b"tc_md5" or b"tc_sha1"
-        self.no_compatible_method = hashfunc == hashlib.md5 and "tc_md5" or 'tc_sha1'
+        self.salt = hashfunc == hashlib.md5 and b"salt_md5" or b"salt_sha1"
+        self.no_compatible_method = hashfunc == hashlib.md5 and "md5" or 'sha1'
         self.extra_wait_size = struct.unpack('>H', os.urandom(2))[0] % 1024
         self.pack_id = 1
         self.recv_id = 1
-        self.user_id = 'tc_0001'
         self.user_key = 'tc_key'
         self.last_rnd_len = 0
         self.overhead = 9
-       
-    def init_server_info(self):
-        return server_info()
-
+        
+        self.server_info = server_info
+    
     def get_overhead(self, direction): # direction: true for c->s false for s->c
         return self.overhead
-
+       
     def trapezoid_random_float(self, d):
         if d == 0:
             return random.random()
@@ -160,7 +152,11 @@ class auth_data(auth_base):
         # data:12b, date_len:2b, rnd_len:2b
         data = data + struct.pack('<H', data_len) + struct.pack('<H', rnd_len)
         mac_key = self.server_info['iv'] + self.server_info['key']
+        
         uid = os.urandom(4)
+        
+        if self.user_key is None:
+            self.user_key = self.server_info['key']
        
         encryptor = encrypt.Encryptor(to_bytes(base64.b64encode(self.user_key)) + self.salt, 'aes-128-cbc', b'\x00' * 16)
         data = uid + encryptor.encrypt(data)[16:] #data is:20b
@@ -168,7 +164,7 @@ class auth_data(auth_base):
         check_head = os.urandom(1)
         check_head += hmac.new(mac_key, check_head, self.hashfunc).digest()[:6]
         rnd_data = os.urandom(rnd_len)
-        rnd_data += hmac.new('tc', rnd_data, self.hashfunc).digest()[:4]
+        rnd_data += hmac.new(mac_key, rnd_data, self.hashfunc).digest()[:4]
         data = check_head + data + rnd_data + buf # 7 + 16 + 4 + 4 + rnd_len + len(buf)
         data += hmac.new(self.user_key, data, self.hashfunc).digest()[:4] # +4
         
@@ -279,6 +275,9 @@ class auth_data(auth_base):
                 return self.not_match_return(self.recv_buf)
 
             uid = self.recv_buf[7:11]
+            
+            if self.user_key is None:
+                self.user_key = self.server_info['key']
             
             encryptor = encrypt.Encryptor(to_bytes(base64.b64encode(self.user_key)) + self.salt, 'aes-128-cbc')
             head = encryptor.decrypt(b'\x00' * 16 + self.recv_buf[11:27] + b'\x00') # need an extra byte or recv empty

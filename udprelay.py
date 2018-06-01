@@ -165,23 +165,23 @@ class UDPRelay(object):
         if common.to_bytes(config['protocol']) in obfs.mu_protocol():
             self._update_users(None, None)
 
-        self.protocol_data = obfs.obfs(config['protocol']).get_obfs().init_data()
-        self._protocol = obfs.obfs(config['protocol']).get_obfs()
-        server_info = obfs.server_info(self.protocol_data)
-        server_info.host = self._listen_addr
-        server_info.port = self._listen_port
-        server_info.users = self.server_users
-        server_info.protocol_param = config['protocol_param']
-        server_info.obfs_param = ''
-        server_info.iv = b''
-        server_info.recv_iv = b''
-        server_info.key_str = common.to_bytes(config['password'])
-        server_info.key = encrypt.encrypt_key(self._password, self._method)
-        server_info.head_len = 30
-        server_info.tcp_mss = 1452
-        server_info.buffer_size = BUF_SIZE
-        server_info.overhead = 0
-        self._protocol.set_server_info(server_info)
+#         self.protocol_data = obfs.obfs(config['protocol']).get_obfs().init_data()
+#         self._protocol = obfs.obfs(config['protocol']).get_obfs()
+#         server_info = obfs.server_info(self.protocol_data)
+#         server_info.host = self._listen_addr
+#         server_info.port = self._listen_port
+#         server_info.users = self.server_users
+#         server_info.protocol_param = config['protocol_param']
+#         server_info.obfs_param = ''
+#         server_info.iv = b''
+#         server_info.recv_iv = b''
+#         server_info.key_str = common.to_bytes(config['password'])
+#         server_info.key = encrypt.encrypt_key(self._password, self._method)
+#         server_info.head_len = 30
+#         server_info.tcp_mss = 1452
+#         server_info.buffer_size = BUF_SIZE
+#         server_info.overhead = 0
+#         self._protocol.set_server_info(server_info)
 
         self._sockets = set()
         self._fd_to_handlers = {}
