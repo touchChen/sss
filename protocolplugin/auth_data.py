@@ -18,9 +18,8 @@ import zlib
 import hmac
 import hashlib
 
-import shadowsocks
-from shadowsocks import common, lru_cache, encrypt
-from shadowsocks.common import to_bytes, to_str, ord, chr
+from shadowsocks import common,  encrypt
+from shadowsocks.common import to_bytes, ord
 
 
 def create_auth_data(server_info):
@@ -87,7 +86,7 @@ class auth_data(protocol_base):
         self.extra_wait_size = struct.unpack('>H', os.urandom(2))[0] % 1024
         self.pack_id = 1
         self.recv_id = 1
-        self.user_key = 'tc_key'
+        self.user_key = None
         self.last_rnd_len = 0
         self.overhead = 9
         

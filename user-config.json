@@ -8,8 +8,8 @@
 
     "password": "123456",
     "method": "aes-128-ctr",
-    //"protocol": "auth_aes128_md5",
-    "protocol": "tc",
+    "protocol": "auth_aes128_md5",
+    //"protocol": "tc",
     "protocol_param": "",
     "obfs": "tls1.2_ticket_auth_compatible",
     //"obfs": "http_simple",

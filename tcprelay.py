@@ -612,9 +612,7 @@ class TCPRelayHandler(object):
             self._l_handle_stage_addr(ogn_data, data)
         else:
             self._s_handle_stage_addr(ogn_data, data)     
-        
-            
-            
+                            
     def _l_handle_stage_addr(self, ogn_data, data):
         try:
             cmd = common.ord(data[1])
