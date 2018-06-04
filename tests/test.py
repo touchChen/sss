@@ -28,7 +28,7 @@ from subprocess import Popen, PIPE
 
 python = ['python']
 
-default_url = 'http://www.jxqx.net'
+default_url = 'http://www.jxqx.net/'
 
 parser = argparse.ArgumentParser(description='test Shadowsocks')
 parser.add_argument('-c', '--client-conf', type=str, default=None)
@@ -48,6 +48,9 @@ if config.with_coverage:
 
 client_args = python + ['../local.py', '-v']
 server_args = python + ['../server.py', '-v']
+
+client_args = python + ['../local.py']
+server_args = python + ['../server.py']
 
 if config.client_conf:
     client_args.extend(['-c', config.client_conf])
