@@ -24,7 +24,7 @@ from shadowsocks.common import to_bytes, to_str, ord, chr
 
 
 def create_auth_data(server_info):
-    return auth_data(server_info, hashlib.md5)
+    return auth_confusion(server_info, hashlib.md5)
 
 
 class protocol_base(object):
@@ -70,9 +70,9 @@ class protocol_base(object):
         pass
 
 
-class auth_data(protocol_base):
+class auth_confusion(protocol_base):
     def __init__(self, server_info, hashfunc):
-        super(auth_data, self).__init__()
+        super(auth_confusion, self).__init__()
         self.hashfunc = hashfunc
         self.recv_buf = b''
         self.unit_len = 8100

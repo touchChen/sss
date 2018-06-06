@@ -154,7 +154,7 @@ class TCPRelayHandler(object):
         self._obfs = obfs.obfs(config['obfs']).get_obfs()
         
         #####
-        if self._config['protocol'] != 'tc':
+        if self._config['protocol'] != 'confusion':
             self._protocol = obfs.obfs(self._config['protocol']).get_obfs()
             self._overhead = self._obfs.get_overhead(self._is_local) + self._protocol.get_overhead(self._is_local)
         else:
@@ -183,7 +183,7 @@ class TCPRelayHandler(object):
         self._obfs.set_server_info(server_info)
         
         #####
-        if self._config['protocol'] != 'tc':
+        if self._config['protocol'] != 'confusion':
             server_info = obfs.server_info(server.protocol_data)
             server_info.host = self._config['server']
             server_info.port = server._listen_port
@@ -667,8 +667,8 @@ class TCPRelayHandler(object):
             self._obfs.server_info.head_len = head_len
             
             #####
-            if self._config['protocol'] != 'tc':
-                self._protocol.server_info.head_len = head_len
+            #if self._config['protocol'] != 'confusion':
+            #    self._protocol.server_info.head_len = head_len
                 
             if self._encryptor is not None:
                 data = self._protocol.client_pre_encrypt(data)
@@ -706,7 +706,7 @@ class TCPRelayHandler(object):
                 header_result = parse_header(data)
             
             #####
-            if self._config['protocol'] != 'tc':   
+            if self._config['protocol'] != 'confusion':   
                 self._overhead = self._obfs.get_overhead(self._is_local) + self._protocol.get_overhead(self._is_local)
             else:
                 self._overhead = self._obfs.get_overhead(self._is_local) +9 # + self._protocol.get_overhead(self._is_local)
@@ -995,7 +995,7 @@ class TCPRelayHandler(object):
                         return
                 if obfs_decode[1]:
                     #####
-                    if self._config['protocol'] != 'tc': 
+                    if self._config['protocol'] != 'confusion': 
                         if not self._protocol.server_info.recv_iv: #what is revce_iv?
                             iv_len = len(self._protocol.server_info.iv)
                             self._protocol.server_info.recv_iv = obfs_decode[0][:iv_len]
@@ -1094,7 +1094,7 @@ class TCPRelayHandler(object):
                     self._write_to_sock(send_back, self._remote_sock)
                     
                 #####
-                if self._config['protocol'] != 'tc': 
+                if self._config['protocol'] != 'confusion': 
                     if not self._protocol.server_info.recv_iv:
                         iv_len = len(self._protocol.server_info.iv)
                         self._protocol.server_info.recv_iv = obfs_decode[0][:iv_len]
@@ -1104,7 +1104,7 @@ class TCPRelayHandler(object):
                     data = self._protocol.client_post_decrypt(data)
                     if self._recv_pack_id == 1:
                         #####
-                        if self._config['protocol'] != 'tc': 
+                        if self._config['protocol'] != 'confusion': 
                             self._tcp_mss = self._protocol.get_server_info().tcp_mss
                         else:
                             self._tcp_mss = TCP_MSS
@@ -1314,7 +1314,7 @@ class TCPRelay(object):
         self._speed_tester_d = {}
         self.server_connections = 0
         #####
-        if self._config['protocol'] != 'tc': 
+        if self._config['protocol'] != 'confusion': 
             self.protocol_data = obfs.obfs(config['protocol']).get_obfs().init_data()
         self.obfs_data = obfs.obfs(config['obfs']).get_obfs().init_data()
 
