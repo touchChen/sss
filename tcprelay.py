@@ -667,8 +667,8 @@ class TCPRelayHandler(object):
             self._obfs.server_info.head_len = head_len
             
             #####
-            if self._config['protocol'] != 'confusion':
-                self._protocol.server_info.head_len = head_len
+#             if self._config['protocol'] != 'confusion':
+#                 self._protocol.server_info.head_len = head_len
                 
             if self._encryptor is not None:
                 data = self._protocol.client_pre_encrypt(data)
