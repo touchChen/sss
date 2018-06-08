@@ -1,19 +1,5 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-#
-# Copyright 2015 clowwindy
-#
-# Licensed under the Apache License, Version 2.0 (the "License"); you may
-# not use this file except in compliance with the License. You may obtain
-# a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations
-# under the License.
 
 from __future__ import absolute_import, division, print_function, \
     with_statement
@@ -30,6 +16,8 @@ import random
 
 from shadowsocks import encrypt, obfs, eventloop, shell, common, lru_cache
 from shadowsocks.common import pre_parse_header, parse_header
+
+from shadowsocks.protocolplugin import protocol
 
 # we clear at most TIMEOUTS_CLEAN_SIZE timeouts each time
 TIMEOUTS_CLEAN_SIZE = 512
@@ -153,14 +141,9 @@ class TCPRelayHandler(object):
         self._encrypt_correct = True
         self._obfs = obfs.obfs(config['obfs']).get_obfs()
         
-        #####
-        if self._config['protocol'] != 'confusion':
-            self._protocol = obfs.obfs(self._config['protocol']).get_obfs()
-            self._overhead = self._obfs.get_overhead(self._is_local) + self._protocol.get_overhead(self._is_local)
-        else:
-            #self._protocol = obfs.obfs(config['protocol']).get_obfs()
-            self._overhead = self._obfs.get_overhead(self._is_local) + 9 #+ self._protocol.get_overhead(self._is_local)
         
+        #self._overhead = self._obfs.get_overhead(self._is_local) + self._protocol.get_overhead(self._is_local)
+        self._overhead = self._obfs.get_overhead(self._is_local) + 9
         self._recv_buffer_size = BUF_SIZE - self._overhead
 
         server_info = obfs.server_info(server.obfs_data)
@@ -182,40 +165,16 @@ class TCPRelayHandler(object):
         server_info.overhead = self._overhead
         self._obfs.set_server_info(server_info)
         
-        #####
-        if self._config['protocol'] != 'confusion':
-            server_info = obfs.server_info(server.protocol_data)
-            server_info.host = self._config['server']
-            server_info.port = server._listen_port
-            server_info.users = server.server_users
-            server_info.update_user_func = self._update_user
-            server_info.client = self._client_address[0]
-            server_info.client_port = self._client_address[1]
-            server_info.protocol_param = self._config['protocol_param']
-            server_info.obfs_param = ''
-            server_info.iv = self._encryptor.cipher_iv
-            server_info.recv_iv = b''
-            server_info.key_str = common.to_bytes(self._config['password'])
-            server_info.key = self._encryptor.cipher_key
-            server_info.head_len = 30
-            server_info.tcp_mss = self._tcp_mss
-            server_info.buffer_size = self._recv_buffer_size
-            server_info.overhead = self._overhead
-            self._protocol.set_server_info(server_info)
-        else:
-            protocol_info = {}
-            protocol_info['protocol_param'] = b''
-            protocol_info['iv'] = protocol_info['recv_iv'] = b'2'
-    
-            protocol_info['key'] = b'19999'
-            protocol_info['tcp_mss'] = TCP_MSS
-            protocol_info['buffer_size'] = 1024
-    
-            from shadowsocks.protocolplugin import auth_data
-            self._protocol = auth_data.create_auth_data(protocol_info)
+        protocol_info = {}
+        protocol_info['protocol_param'] = self._config['protocol_param']
+        #protocol_info['iv'] = protocol_info['recv_iv'] = self._encryptor.cipher_iv
+        #protocol_info['recv_iv'] = b''
+        protocol_info['key'] = self._encryptor.cipher_key
+        protocol_info['tcp_mss'] = self._tcp_mss
+        protocol_info['buffer_size'] = self._recv_buffer_size
+        self._protocol = protocol.Protocol(self._config['protocol']).get_protocol(protocol_info)
         
         
-
         self._redir_list = config.get('redirect', ["*#0.0.0.0:0"])
         self._is_redirect = False
         self._bind = config.get('out_bind', '')
@@ -665,10 +624,6 @@ class TCPRelayHandler(object):
                                     self._local_sock)
             head_len = self._get_head_size(data, 30)
             self._obfs.server_info.head_len = head_len
-            
-            #####
-#             if self._config['protocol'] != 'confusion':
-#                 self._protocol.server_info.head_len = head_len
                 
             if self._encryptor is not None:
                 data = self._protocol.client_pre_encrypt(data)
@@ -705,12 +660,8 @@ class TCPRelayHandler(object):
                 data = self._handel_protocol_error(self._client_address, ogn_data)
                 header_result = parse_header(data)
             
-            #####
-            if self._config['protocol'] != 'confusion':   
-                self._overhead = self._obfs.get_overhead(self._is_local) + self._protocol.get_overhead(self._is_local)
-            else:
-                self._overhead = self._obfs.get_overhead(self._is_local) +9 # + self._protocol.get_overhead(self._is_local)
-                
+            self._overhead = self._obfs.get_overhead(self._is_local) + self._protocol.get_overhead(self._is_local)
+            
             self._recv_buffer_size = BUF_SIZE - self._overhead
             server_info = self._obfs.get_server_info()
             server_info.buffer_size = self._recv_buffer_size
@@ -970,12 +921,6 @@ class TCPRelayHandler(object):
             if self._encrypt_correct:
                 try:
                     obfs_decode = self._obfs.server_decode(data)
-                    '''
-                    if self._stage == STAGE_INIT:
-                        self._overhead = self._obfs.get_overhead(self._is_local) + self._protocol.get_overhead(self._is_local)
-                        server_info = self._protocol.get_server_info() #what is server_info
-                        server_info.overhead = self._overhead
-                    '''
                 except Exception as e:
                     shell.print_exception(e)
                     logging.error("exception from %s:%d" % (self._client_address[0], self._client_address[1]))
@@ -994,15 +939,16 @@ class TCPRelayHandler(object):
                         self.destroy()
                         return
                 if obfs_decode[1]:
-                    #####
-                    if self._config['protocol'] != 'confusion': 
-                        if not self._protocol.server_info.recv_iv: #what is revce_iv?
-                            iv_len = len(self._protocol.server_info.iv)
-                            self._protocol.server_info.recv_iv = obfs_decode[0][:iv_len]
+#                     #####
+#                     if self._config['protocol'] != 'confusion': 
+#                         if not self._protocol.server_info.recv_iv: #what is revce_iv?
+#                             iv_len = len(self._protocol.server_info.iv)
+#                             self._protocol.server_info.recv_iv = obfs_decode[0][:iv_len]
                             
                     data = self._encryptor.decrypt(obfs_decode[0])
                 else:
                     data = obfs_decode[0]
+                    
                     
                 try:
                     data, sendback = self._protocol.server_post_decrypt(data)
@@ -1093,21 +1039,17 @@ class TCPRelayHandler(object):
                     send_back = self._obfs.client_encode(b'')
                     self._write_to_sock(send_back, self._remote_sock)
                     
-                #####
-                if self._config['protocol'] != 'confusion': 
-                    if not self._protocol.server_info.recv_iv:
-                        iv_len = len(self._protocol.server_info.iv)
-                        self._protocol.server_info.recv_iv = obfs_decode[0][:iv_len]
+#                 #####
+#                 if self._config['protocol'] != 'confusion': 
+#                     if not self._protocol.server_info.recv_iv:
+#                         iv_len = len(self._protocol.server_info.iv)
+#                         self._protocol.server_info.recv_iv = obfs_decode[0][:iv_len]
                         
                 data = self._encryptor.decrypt(obfs_decode[0])
                 try:
                     data = self._protocol.client_post_decrypt(data)
                     if self._recv_pack_id == 1:
-                        #####
-                        if self._config['protocol'] != 'confusion': 
-                            self._tcp_mss = self._protocol.get_server_info().tcp_mss
-                        else:
-                            self._tcp_mss = TCP_MSS
+                        self._tcp_mss = TCP_MSS
                 except Exception as e:
                     shell.print_exception(e)
                     logging.error("exception from %s:%d" % (self._client_address[0], self._client_address[1]))
@@ -1313,9 +1255,6 @@ class TCPRelay(object):
         self._speed_tester_u = {}
         self._speed_tester_d = {}
         self.server_connections = 0
-        #####
-        if self._config['protocol'] != 'confusion': 
-            self.protocol_data = obfs.obfs(config['protocol']).get_obfs().init_data()
         self.obfs_data = obfs.obfs(config['obfs']).get_obfs().init_data()
 
         if config.get('connect_verbose_info', 0) > 0:

@@ -38,8 +38,8 @@ sys.path.insert(0, os.path.join(file_path, '../../'))
 
 from shadowsocks import encrypt, obfs, eventloop, shell, common, lru_cache
 from shadowsocks.common import pre_parse_header, parse_header
+from shadowsocks.protocolplugin import protocol
 
-config = {}
-config['protocol'] = 'confusion'
+protocol = protocol.Protocol('confusion')
 
 

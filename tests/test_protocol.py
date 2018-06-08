@@ -33,8 +33,8 @@ server_info['tcp_mss'] = TCP_MSS
 server_info['buffer_size'] = 1024
 
 
-_obfs = auth_data.create_auth_data(server_info)
-_obfs2 = auth_data.create_auth_data(server_info)
+_obfs = auth_data.create_auth_aes128_md5(server_info)
+_obfs2 = auth_data.create_auth_aes128_md5(server_info)
 
  
  
