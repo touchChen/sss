@@ -28,8 +28,6 @@ class Protocol(object):
 #             protocol_info['tcp_mss'] = TCP_MSS
 #             protocol_info['buffer_size'] = 1024
             
-            print(protocol_info)
-            
             m = auth_data.protocol_map.get(self.protocol_name)
             self.protocol = m[0](protocol_info)
             
