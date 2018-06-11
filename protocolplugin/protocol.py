@@ -4,9 +4,6 @@
 from __future__ import absolute_import, division, print_function, \
     with_statement
 
-import shadowsocks  
-from shadowsocks import encrypt, obfs, eventloop, shell, common, lru_cache
-from shadowsocks.common import pre_parse_header, parse_header
 from shadowsocks.protocolplugin import auth_data
 
 
@@ -21,7 +18,7 @@ class Protocol(object):
         self.protocol = None
         if self.protocol_name in self.mu_protocol():
             protocol_info['iv'] = protocol_info['recv_iv'] = b'it is using...'
-            protocol_info['recv_iv'] = b''
+            #protocol_info['recv_iv'] = b''
            
             m = auth_data.protocol_map.get(self.protocol_name)
             self.protocol = m[0](protocol_info)

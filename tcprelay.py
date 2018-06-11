@@ -167,8 +167,8 @@ class TCPRelayHandler(object):
         
         protocol_info = {}
         protocol_info['protocol_param'] = self._config['protocol_param']
-        #protocol_info['iv'] = protocol_info['recv_iv'] = self._encryptor.cipher_iv
-        #protocol_info['recv_iv'] = b''
+        protocol_info['iv'] = self._encryptor.cipher_iv
+        protocol_info['recv_iv'] = b''
         protocol_info['key'] = self._encryptor.cipher_key
         protocol_info['tcp_mss'] = self._tcp_mss
         protocol_info['buffer_size'] = self._recv_buffer_size
