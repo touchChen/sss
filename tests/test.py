@@ -28,7 +28,7 @@ from subprocess import Popen, PIPE
 
 python = ['python']
 
-default_url = 'http://www.jxqx.net/'
+default_url = 'http://www.baidu.com/'
 
 parser = argparse.ArgumentParser(description='test Shadowsocks')
 parser.add_argument('-c', '--client-conf', type=str, default=None)
@@ -45,7 +45,8 @@ config = parser.parse_args()
 
 if config.with_coverage:
     python = ['coverage', 'run', '-p']
-
+#             protocol_info = {}
+#             protocol_info['protocol_param'] = b''
 client_args = python + ['../local.py', '-v']
 server_args = python + ['../server.py', '-v']
 
@@ -71,6 +72,7 @@ if config.url == default_url:
 
 
 p1 = Popen(server_args, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
+time.sleep(2)
 p2 = Popen(client_args, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
 p3 = None
 p4 = None
@@ -116,6 +118,7 @@ try:
                 stage = 2
             else:
                 sys.exit(1)
+                
 
         if stage == 3 and p3 is not None:
             fdset.remove(p3.stdout)

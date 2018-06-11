@@ -38,21 +38,8 @@ sys.path.insert(0, os.path.join(file_path, '../../'))
 
 from shadowsocks import encrypt, obfs, eventloop, shell, common, lru_cache
 from shadowsocks.common import pre_parse_header, parse_header
+from shadowsocks.protocolplugin import protocol
 
-from shadowsocks.obfsplugin import aa
+protocol = protocol.Protocol('confusion')
 
-s = random.random()
 
-print(s)
-
-# o = common.ord('8')
-# print(o)
-
-# u = os.urandom(1)
-# print(u)
-# u = 'A'
-# c = struct.unpack('<B', u)[0]
-# print(c)
-# c = c+1
-# _u = struct.pack('<B',c)
-# print(_u)
