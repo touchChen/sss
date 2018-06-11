@@ -20,14 +20,9 @@ class Protocol(object):
     def get_protocol(self,protocol_info):
         self.protocol = None
         if self.protocol_name in self.mu_protocol():
-#             protocol_info = {}
-#             protocol_info['protocol_param'] = b''
-            protocol_info['iv'] = protocol_info['recv_iv'] = b'fadfafd'
-#     
-#             protocol_info['key'] = b'19999'
-#             protocol_info['tcp_mss'] = TCP_MSS
-#             protocol_info['buffer_size'] = 1024
-            
+            protocol_info['iv'] = protocol_info['recv_iv'] = b'it is using...'
+            protocol_info['recv_iv'] = b''
+           
             m = auth_data.protocol_map.get(self.protocol_name)
             self.protocol = m[0](protocol_info)
             

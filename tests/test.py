@@ -45,7 +45,8 @@ config = parser.parse_args()
 
 if config.with_coverage:
     python = ['coverage', 'run', '-p']
-
+#             protocol_info = {}
+#             protocol_info['protocol_param'] = b''
 client_args = python + ['../local.py', '-v']
 server_args = python + ['../server.py', '-v']
 
@@ -117,6 +118,7 @@ try:
                 stage = 2
             else:
                 sys.exit(1)
+                
 
         if stage == 3 and p3 is not None:
             fdset.remove(p3.stdout)

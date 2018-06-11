@@ -571,9 +571,7 @@ class TCPRelayHandler(object):
             self._l_handle_stage_addr(ogn_data, data)
         else:
             self._s_handle_stage_addr(ogn_data, data)     
-        
-            
-            
+                   
     def _l_handle_stage_addr(self, ogn_data, data):
         try:
             cmd = common.ord(data[1])
@@ -939,12 +937,6 @@ class TCPRelayHandler(object):
                         self.destroy()
                         return
                 if obfs_decode[1]:
-#                     #####
-#                     if self._config['protocol'] != 'confusion': 
-#                         if not self._protocol.server_info.recv_iv: #what is revce_iv?
-#                             iv_len = len(self._protocol.server_info.iv)
-#                             self._protocol.server_info.recv_iv = obfs_decode[0][:iv_len]
-                            
                     data = self._encryptor.decrypt(obfs_decode[0])
                 else:
                     data = obfs_decode[0]
@@ -952,21 +944,6 @@ class TCPRelayHandler(object):
                     
                 try:
                     data, sendback = self._protocol.server_post_decrypt(data)
-                    '''
-                    if sendback: #send empty to client
-                        backdata = self._protocol.server_pre_encrypt(b'')
-                        backdata = self._encryptor.encrypt(backdata)
-                        backdata = self._obfs.server_encode(backdata)
-                        try:
-                            self._write_to_sock(backdata, self._local_sock)
-                        except Exception as e:
-                            shell.print_exception(e)
-                            if self._config['verbose']:
-                                traceback.print_exc()
-                            logging.error("exception from %s:%d" % (self._client_address[0], self._client_address[1]))
-                            self.destroy()
-                            return
-                    '''
                 except Exception as e:
                     shell.print_exception(e)
                     logging.error("exception from %s:%d" % (self._client_address[0], self._client_address[1]))
