@@ -17,9 +17,6 @@ class Protocol(object):
     def get_protocol(self,protocol_info):
         self.protocol = None
         if self.protocol_name in self.mu_protocol():
-            protocol_info['iv'] = protocol_info['recv_iv'] = b'it is using...'
-            #protocol_info['recv_iv'] = b''
-           
             m = auth_data.protocol_map.get(self.protocol_name)
             self.protocol = m[0](protocol_info)
             

@@ -938,6 +938,10 @@ class TCPRelayHandler(object):
                         self.destroy()
                         return
                 if obfs_decode[1]:
+                    if not self._protocol.server_info['recv_iv']:
+                        iv_len = len(self._protocol.server_info['iv'])
+                        self._protocol.server_info['recv_iv'] = obfs_decode[0][:iv_len]
+                        
                     data = self._encryptor.decrypt(obfs_decode[0])
                 else:
                     data = obfs_decode[0]
@@ -1017,11 +1021,9 @@ class TCPRelayHandler(object):
                     send_back = self._obfs.client_encode(b'')
                     self._write_to_sock(send_back, self._remote_sock)
                     
-#                 #####
-#                 if self._config['protocol'] != 'confusion': 
-#                     if not self._protocol.server_info.recv_iv:
-#                         iv_len = len(self._protocol.server_info.iv)
-#                         self._protocol.server_info.recv_iv = obfs_decode[0][:iv_len]
+                    if not self._protocol.server_info['recv_iv']:
+                        iv_len = len(self._protocol.server_info['iv'])
+                        self._protocol.server_info['recv_iv'] = obfs_decode[0][:iv_len]
                         
                 data = self._encryptor.decrypt(obfs_decode[0])
                 try:

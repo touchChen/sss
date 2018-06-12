@@ -18,7 +18,7 @@ import zlib
 import hmac
 import hashlib
 
-from shadowsocks import common,  encrypt
+from shadowsocks import common, lru_cache, encrypt
 from shadowsocks.common import to_bytes, ord
 
 
