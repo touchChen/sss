@@ -7,7 +7,6 @@ import struct
 import logging
 
 import inspect
-from grp import struct_group
 
     
 file_path = os.path.dirname(os.path.realpath(inspect.getfile(inspect.currentframe())))

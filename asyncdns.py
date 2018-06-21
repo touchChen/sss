@@ -423,6 +423,7 @@ class DNSResolver(object):
             self._loop.add(self._sock, eventloop.POLL_IN, self)
         else:
             data, addr = sock.recvfrom(1024)
+            logging.debug('received addr:%s' %(addr,))
             if addr not in self._servers:
                 logging.warn('received a packet other than our dns')
                 return
@@ -444,6 +445,7 @@ class DNSResolver(object):
                         del self._hostname_status[hostname]
 
     def _send_req(self, hostname, qtype):
+        logging.debug('hostname is: %s'%hostname)
         req = build_request(hostname, qtype)
         for server in self._servers:
             logging.debug('resolving %s with type %d using server %s',
@@ -469,15 +471,15 @@ class DNSResolver(object):
             if not is_valid_hostname(hostname):
                 callback(None, Exception('invalid hostname: %s' % hostname))
                 return
-            if False:
-                addrs = socket.getaddrinfo(hostname, 0, 0,
-                                       socket.SOCK_DGRAM, socket.SOL_UDP)
-                if addrs:
-                    af, socktype, proto, canonname, sa = addrs[0]
-                    logging.debug('DNS resolve %s %s' % (hostname, sa[0]) )
-                    self._cache[hostname] = sa[0]
-                    callback((hostname, sa[0]), None)
-                    return
+#             if False:
+#                 addrs = socket.getaddrinfo(hostname, 0, 0,
+#                                        socket.SOCK_DGRAM, socket.SOL_UDP)
+#                 if addrs:
+#                     af, socktype, proto, canonname, sa = addrs[0]
+#                     logging.debug('DNS resolve %s %s' % (hostname, sa[0]) )
+#                     self._cache[hostname] = sa[0]
+#                     callback((hostname, sa[0]), None)
+#                     return
             arr = self._hostname_to_cb.get(hostname, None)
             if not arr:
                 if IPV6_CONNECTION_SUPPORT:
@@ -506,6 +508,10 @@ class DNSResolver(object):
 
 
 def test():
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(asctime)s %(levelname)-8s %(filename)s:%(lineno)s %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S')
+    
     dns_resolver = DNSResolver()
     loop = eventloop.EventLoop()
     dns_resolver.add_to_loop(loop)
@@ -548,7 +554,6 @@ def test():
                          'long.hostname', make_callback())
 
     loop.run()
-
 
 if __name__ == '__main__':
     test()

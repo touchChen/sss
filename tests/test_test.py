@@ -42,4 +42,7 @@ from shadowsocks.protocolplugin import protocol
 
 protocol = protocol.Protocol('confusion')
 
+while True:
+    c = raw_input("$> ")
+    print('$> %s'%c)
 
