@@ -8,6 +8,8 @@ import logging
 
 import inspect
 
+import socket
+
     
 file_path = os.path.dirname(os.path.realpath(inspect.getfile(inspect.currentframe())))
 sys.path.insert(0, os.path.join(file_path, '../../'))
@@ -15,35 +17,76 @@ sys.path.insert(0, os.path.join(file_path, '../../'))
 from shadowsocks import eventloop, shell, common, lru_cache, version
 from shadowsocks import asyncdns
 
+
 logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(levelname)-8s %(filename)s:%(lineno)s %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
 
 
-dns_resolver = asyncdns.DNSResolver()
-loop = eventloop.EventLoop()
-dns_resolver.add_to_loop(loop)
-
-global counter
-counter = 0
-
-def make_callback():
-    global counter
- 
+def make_callback(sock,addr):
     def callback(result, error):
-        global counter
-        # TODO: what can we assert?
-        print(result, error)
-        counter += 1
-        if counter == 9:
-            dns_resolver.close()
-            loop.stop()
+#         print(result, error)
+#         print(result[1])
+        sock.sendto(result[1],addr)
             
     a_callback = callback
     return a_callback
  
-assert(make_callback() != make_callback())
- 
+#assert(make_callback() != make_callback())
+
+
+class InputDNS(object):
+    def __init__(self, dns_resolver):
+        self._loop = None
+        self._dns_resolver = dns_resolver
+        
+    def add_to_loop(self, loop):
+        if self._loop:
+            raise Exception('already add to loop')
+        self._loop = loop
+   
+        address = ('0.0.0.0',1985)
+        self._sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+        self._sock.bind(address)
+        
+        loop.add(self._sock, eventloop.POLL_IN, self)
+        #loop.add_periodic(self.handle_periodic)
+        
+    def handle_periodic(self):
+        logging.debug('call handle_periodic')
+        
+    def handle_event(self, sock, fd, event):
+        logging.debug('handle_event')
+        if sock != self._sock:
+            return
+        if event & eventloop.POLL_ERR:
+            logging.error('dns socket err')
+            self._loop.remove(self._sock)
+            self._sock.close()
+            address = ('0.0.0.0',1985)
+            self._sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+            self._sock.bind(address)
+        
+            loop.add(self._sock, eventloop.POLL_IN, self)
+            
+        elif event & eventloop.POLL_IN:
+            data, addr = self._sock.recvfrom(1024)
+            logging.debug('received addr:%s' %(addr,))
+            logging.debug('received data:%s' %data)
+            
+            self._dns_resolver.resolve(data, make_callback(self._sock,addr))
+        
+        else:
+            loop.stop()
+            
+
+dns_resolver = asyncdns.DNSResolver()
+loop = eventloop.EventLoop()
+dns_resolver.add_to_loop(loop)
+
+indns = InputDNS(dns_resolver)
+indns.add_to_loop(loop)
+
 loop.run()
-print('hello world')
-dns_resolver.resolve(b'www.jxqx.net', make_callback())
+
+
