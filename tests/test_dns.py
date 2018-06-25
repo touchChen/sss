@@ -25,14 +25,10 @@ logging.basicConfig(level=logging.DEBUG,
 
 def make_callback(sock,addr):
     def callback(result, error):
-#         print(result, error)
-#         print(result[1])
         sock.sendto(result[1],addr)
-            
+        
     a_callback = callback
     return a_callback
- 
-#assert(make_callback() != make_callback())
 
 
 class InputDNS(object):
@@ -50,11 +46,8 @@ class InputDNS(object):
         self._sock.bind(address)
         
         loop.add(self._sock, eventloop.POLL_IN, self)
-        #loop.add_periodic(self.handle_periodic)
         
-    def handle_periodic(self):
-        logging.debug('call handle_periodic')
-        
+            
     def handle_event(self, sock, fd, event):
         logging.debug('handle_event')
         if sock != self._sock:
