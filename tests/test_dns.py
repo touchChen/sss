@@ -14,6 +14,9 @@ import socket
 file_path = os.path.dirname(os.path.realpath(inspect.getfile(inspect.currentframe())))
 sys.path.insert(0, os.path.join(file_path, '../../'))
 
+print(sys.path)
+#sys.exit()
+
 from shadowsocks import eventloop, shell, common, lru_cache, version
 from shadowsocks import asyncdns
 

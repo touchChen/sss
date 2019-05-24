@@ -32,3 +32,9 @@ htmlcov
 
 #Emacs
 .#*
+
+#develop tool
+.project
+.pydevproject
+.settings
+.setting/*

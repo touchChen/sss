@@ -28,7 +28,7 @@ from subprocess import Popen, PIPE
 
 python = ['python']
 
-default_url = 'http://www.baidu.com/'
+default_url = 'https://www.yk5jin.com/'
 
 parser = argparse.ArgumentParser(description='test Shadowsocks')
 parser.add_argument('-c', '--client-conf', type=str, default=None)
@@ -70,7 +70,6 @@ if config.client_args:
 if config.url == default_url:
     server_args.extend(['--forbidden-ip', ''])
 
-
 p1 = Popen(server_args, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
 time.sleep(2)
 p2 = Popen(client_args, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
@@ -104,20 +103,19 @@ try:
                 local_ready = True
             if line.find('starting server') >= 0:
                 server_ready = True
-
-        if stage == 1:
-            time.sleep(2)
-
-            p3 = Popen(['curl', config.url, '-v', '-L',
-                        '--socks5-hostname', '127.0.0.1:18080',
-                        '-m', '15', '--connect-timeout', '10'],
-                       stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
-            if p3 is not None:
-                fdset.append(p3.stdout)
-                fdset.append(p3.stderr)
-                stage = 2
-            else:
-                sys.exit(1)
+        
+        if local_ready and server_ready:
+            if stage == 1:
+                p3 = Popen(['curl', config.url, '-v', '-L',
+                            '--socks5-hostname', '127.0.0.1:18080',
+                            '-m', '15', '--connect-timeout', '10'],
+                           stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
+                if p3 is not None:
+                    fdset.append(p3.stdout)
+                    fdset.append(p3.stderr)
+                    stage = 2
+                else:
+                    sys.exit(1)
                 
 
         if stage == 3 and p3 is not None:
@@ -141,3 +139,4 @@ finally:
             os.waitpid(p.pid, 0)
         except OSError:
             pass
+        
