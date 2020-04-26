@@ -10,7 +10,7 @@ import inspect
 
 import socket
 
-    
+
 file_path = os.path.dirname(os.path.realpath(inspect.getfile(inspect.currentframe())))
 sys.path.insert(0, os.path.join(file_path, '../../'))
 
