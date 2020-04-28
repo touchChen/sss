@@ -377,7 +377,6 @@ class DNSResolver(object):
                 if answer[1] in (QTYPE_A, QTYPE_AAAA) and \
                         answer[2] == QCLASS_IN:
                     ip = answer[0]
-                    print('ok....')
                     break
             if IPV6_CONNECTION_SUPPORT:
                 if not ip and self._hostname_status.get(hostname, STATUS_IPV4) \
