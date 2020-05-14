@@ -125,19 +125,19 @@ def parse_name(data, offset):
     labels = []
     l = common.ord(data[p])
     
-    if (l & (128 + 64)) == (128 + 64):
-        # pointer
-        pointer = struct.unpack('!H', data[p:p + 2])[0]
-        pointer &= 0x3FFF
-        r = parse_name(data, pointer)
-        labels.append(r[1])
-        p += 2
-        # pointer is the end
-        return p - offset, b'.'.join(labels)
-    
     while l > 0:
-        labels.append(data[p + 1:p + 1 + l])
-        p += 1 + l
+        if (l & (128 + 64)) == (128 + 64):
+            # pointer
+            pointer = struct.unpack('!H', data[p:p + 2])[0]
+            pointer &= 0x3FFF
+            r = parse_name(data, pointer)
+            labels.append(r[1])
+            p += 2
+            # pointer is the end
+            return p - offset, b'.'.join(labels)
+        else:
+            labels.append(data[p + 1:p + 1 + l])
+            p += 1 + l
         l = common.ord(data[p])
     return p - offset + 1, b'.'.join(labels)
 
