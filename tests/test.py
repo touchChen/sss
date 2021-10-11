@@ -28,7 +28,7 @@ from subprocess import Popen, PIPE
 
 python = ['python']
 
-default_url = 'https://www.yk5jin.com/'
+default_url = 'https://www.baidu.com/'
 
 parser = argparse.ArgumentParser(description='test Shadowsocks')
 parser.add_argument('-c', '--client-conf', type=str, default=None)
@@ -45,8 +45,7 @@ config = parser.parse_args()
 
 if config.with_coverage:
     python = ['coverage', 'run', '-p']
-#             protocol_info = {}
-#             protocol_info['protocol_param'] = b''
+
 client_args = python + ['../local.py', '-v']
 server_args = python + ['../server.py', '-v']
 

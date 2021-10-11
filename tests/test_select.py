@@ -33,7 +33,6 @@ server_args = python + ['../server.py', '-v']
 
 
 p1 = Popen(server_args, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
-time.sleep(2)
 p2 = Popen(client_args, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
 
 

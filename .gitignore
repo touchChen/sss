@@ -37,4 +37,7 @@ htmlcov
 .project
 .pydevproject
 .settings
-.setting/*
+.settings/*
+
+.vscode
+.vscode/*
