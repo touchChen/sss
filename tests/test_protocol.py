@@ -42,10 +42,12 @@ _ens = []
 _en1 = _obfs.client_pre_encrypt("66666")
 _en2 = _obfs.client_pre_encrypt("  is home,")
 _en3 = _obfs.client_pre_encrypt("  worrrr.")
+_en4 = _obfs.client_pre_encrypt("  add 444444")
 
 _ens.append(_en1)
 _ens.append(_en2)
 _ens.append(_en3)
+_ens.append(_en4)
   
 _en = b''.join(_ens)
 _de = _obfs2.server_post_decrypt(_en)

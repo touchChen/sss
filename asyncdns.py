@@ -1,23 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-#
-# Copyright 2014-2015 clowwindy
-#
-# Licensed under the Apache License, Version 2.0 (the "License"); you may
-# not use this file except in compliance with the License. You may obtain
-# a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations
-# under the License.
 
 from __future__ import absolute_import, division, print_function, \
     with_statement
 
+import sys
 import os
 import socket
 import struct
@@ -31,7 +18,6 @@ if __name__ == '__main__':
     sys.path.insert(0, os.path.join(file_path, '../'))
 
 from shadowsocks import common, lru_cache, eventloop, shell
-
 
 CACHE_SWEEP_INTERVAL = 30
 
@@ -54,6 +40,7 @@ common.patch_socket()
 # +---------------------+
 #
 # header
+#  高位
 #                                 1  1  1  1  1  1
 #   0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5
 # +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
@@ -77,6 +64,11 @@ QTYPE_CNAME = 5
 QTYPE_NS = 2
 QCLASS_IN = 1
 
+# H unsigned short  2
+# B unsigned char   1
+# i int             4
+
+
 def detect_ipv6_supprot():
     if 'has_ipv6' in dir(socket):
         try:
@@ -89,7 +81,9 @@ def detect_ipv6_supprot():
     print('IPv6 not support')
     return False
 
+
 IPV6_CONNECTION_SUPPORT = detect_ipv6_supprot()
+
 
 def build_address(address):
     address = address.strip(b'.')
@@ -105,17 +99,19 @@ def build_address(address):
     return b''.join(results)
 
 
+
+
 def build_request(address, qtype):
     request_id = os.urandom(2)
-    header = struct.pack('!BBHHHH', 1, 0, 1, 0, 0, 0)
+    header = struct.pack('!BBHHHH', 1, 0, 1, 0, 0, 0) # 10个字节 ！表示网络字节序 第一个1 指向 RA （高位存在低内存,即高位存前面）
     addr = build_address(address)
-    qtype_qclass = struct.pack('!HH', qtype, QCLASS_IN)
-    return request_id + header + addr + qtype_qclass
+    qtype_qclass = struct.pack('!HH', qtype, QCLASS_IN)  #查询类型  查询类 （1/28,1）
+    return request_id + header + addr + qtype_qclass   # header + queries  (头部,查询问题区域)
 
 
 def parse_ip(addrtype, data, length, offset):
     if addrtype == QTYPE_A:
-        return socket.inet_ntop(socket.AF_INET, data[offset:offset + length])
+        return socket.inet_ntop(socket.AF_INET, data[offset:offset + length])  # 转化成IP地址
     elif addrtype == QTYPE_AAAA:
         return socket.inet_ntop(socket.AF_INET6, data[offset:offset + length])
     elif addrtype in [QTYPE_CNAME, QTYPE_NS]:
@@ -128,6 +124,7 @@ def parse_name(data, offset):
     p = offset
     labels = []
     l = common.ord(data[p])
+    
     while l > 0:
         if (l & (128 + 64)) == (128 + 64):
             # pointer
@@ -252,6 +249,7 @@ def is_valid_hostname(hostname):
 
 
 class DNSResponse(object):
+
     def __init__(self):
         self.hostname = None
         self.questions = []  # each: (addr, type, class)
@@ -423,7 +421,7 @@ class DNSResolver(object):
             self._loop.add(self._sock, eventloop.POLL_IN, self)
         else:
             data, addr = sock.recvfrom(1024)
-            logging.debug('received addr:%s' %(addr,))
+            logging.debug('received addr:%s' % (addr,))
             if addr not in self._servers:
                 logging.warn('received a packet other than our dns')
                 return
@@ -445,12 +443,12 @@ class DNSResolver(object):
                         del self._hostname_status[hostname]
 
     def _send_req(self, hostname, qtype):
-        logging.debug('hostname is: %s'%hostname)
+        logging.debug('hostname is: %s' % hostname)
         req = build_request(hostname, qtype)
         for server in self._servers:
             logging.debug('resolving %s with type %d using server %s',
                           hostname, qtype, server)
-            self._sock.sendto(req, server)
+            self._sock.sendto(req, server) # server (ip, port)
 
     def resolve(self, hostname, callback):
         if type(hostname) != bytes:
@@ -525,35 +523,41 @@ def test():
         def callback(result, error):
             global counter
             # TODO: what can we assert?
-            print(result, error)
+            
             counter += 1
-            if counter == 9:
+            print(counter, result, error)
+            if counter == 1:
                 dns_resolver.close()
                 loop.stop()
+
         a_callback = callback
         return a_callback
 
     assert(make_callback() != make_callback())
 
-    dns_resolver.resolve(b'google.com', make_callback())
-    dns_resolver.resolve('google.com', make_callback())
-    dns_resolver.resolve('example.com', make_callback())
-    dns_resolver.resolve('ipv6.google.com', make_callback())
-    dns_resolver.resolve('www.facebook.com', make_callback())
-    dns_resolver.resolve('ns2.google.com', make_callback())
-    dns_resolver.resolve('invalid.@!#$%^&$@.hostname', make_callback())
-    dns_resolver.resolve('toooooooooooooooooooooooooooooooooooooooooooooooooo'
-                         'ooooooooooooooooooooooooooooooooooooooooooooooooooo'
-                         'long.hostname', make_callback())
-    dns_resolver.resolve('toooooooooooooooooooooooooooooooooooooooooooooooooo'
-                         'ooooooooooooooooooooooooooooooooooooooooooooooooooo'
-                         'ooooooooooooooooooooooooooooooooooooooooooooooooooo'
-                         'ooooooooooooooooooooooooooooooooooooooooooooooooooo'
-                         'ooooooooooooooooooooooooooooooooooooooooooooooooooo'
-                         'ooooooooooooooooooooooooooooooooooooooooooooooooooo'
-                         'long.hostname', make_callback())
+    dns_resolver.resolve('www.yk5jin.com', make_callback())
+#     dns_resolver.resolve(b'google.com', make_callback())
+#     dns_resolver.resolve('google.com', make_callback())
+#     dns_resolver.resolve('yk5jin.com', make_callback())
+#     dns_resolver.resolve('yk5jin.cn', make_callback())
+#     dns_resolver.resolve('example.com', make_callback())
+#     dns_resolver.resolve('ipv6.google.com', make_callback())
+#     dns_resolver.resolve('www.facebook.com', make_callback())
+#     dns_resolver.resolve('ns2.google.com', make_callback())
+#     dns_resolver.resolve('invalid.@!#$%^&$@.hostname', make_callback())
+#     dns_resolver.resolve('toooooooooooooooooooooooooooooooooooooooooooooooooo'
+#                          'ooooooooooooooooooooooooooooooooooooooooooooooooooo'
+#                          'long.hostname', make_callback())
+#     dns_resolver.resolve('toooooooooooooooooooooooooooooooooooooooooooooooooo'
+#                          'ooooooooooooooooooooooooooooooooooooooooooooooooooo'
+#                          'ooooooooooooooooooooooooooooooooooooooooooooooooooo'
+#                          'ooooooooooooooooooooooooooooooooooooooooooooooooooo'
+#                          'ooooooooooooooooooooooooooooooooooooooooooooooooooo'
+#                          'ooooooooooooooooooooooooooooooooooooooooooooooooooo'
+#                          'long.hostname', make_callback())
 
     loop.run()
+
 
 if __name__ == '__main__':
     test()
