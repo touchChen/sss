@@ -10,29 +10,28 @@ import inspect
 
 import socket
 
-
 file_path = os.path.dirname(os.path.realpath(inspect.getfile(inspect.currentframe())))
 sys.path.insert(0, os.path.join(file_path, '../../'))
 
 print(sys.path)
-#sys.exit()
+# sys.exit()
 
 from shadowsocks import eventloop, shell, common, lru_cache, version
 from shadowsocks import asyncdns
-
 
 logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(levelname)-8s %(filename)s:%(lineno)s %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
 
-
-def make_callback(sock,addr):
+def make_callback(sock, addr):
     def callback(result, error):
-        sock.sendto(result[1],addr)
+        ret = result[1]
+        if ret is None:
+            ret = 'Not Find'
+        sock.sendto(ret, addr)
         
     a_callback = callback
     return a_callback
-
 
 class InputDNS(object):
     def __init__(self, dns_resolver):
@@ -44,12 +43,11 @@ class InputDNS(object):
             raise Exception('already add to loop')
         self._loop = loop
    
-        address = ('0.0.0.0',1985)
-        self._sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+        address = ('0.0.0.0', 2000)
+        self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._sock.bind(address)
         
         loop.add(self._sock, eventloop.POLL_IN, self)
-        
             
     def handle_event(self, sock, fd, event):
         logging.debug('handle_event')
@@ -59,22 +57,21 @@ class InputDNS(object):
             logging.error('dns socket err')
             self._loop.remove(self._sock)
             self._sock.close()
-            address = ('0.0.0.0',1985)
-            self._sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+            address = ('0.0.0.0', 2000)
+            self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self._sock.bind(address)
         
             loop.add(self._sock, eventloop.POLL_IN, self)
             
         elif event & eventloop.POLL_IN:
             data, addr = self._sock.recvfrom(1024)
-            logging.debug('received addr:%s' %(addr,))
-            logging.debug('received data:%s' %data)
+            logging.debug('received addr:%s' % (addr,))
+            logging.debug('received data:%s' % data)
             
-            self._dns_resolver.resolve(data, make_callback(self._sock,addr))
+            self._dns_resolver.resolve(data, make_callback(self._sock, addr))
         
         else:
             loop.stop()
-            
 
 dns_resolver = asyncdns.DNSResolver()
 loop = eventloop.EventLoop()
@@ -84,5 +81,4 @@ indns = InputDNS(dns_resolver)
 indns.add_to_loop(loop)
 
 loop.run()
-
 
